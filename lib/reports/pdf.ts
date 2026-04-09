@@ -485,10 +485,12 @@ export function buildPDFReport(data: any, module: string): jsPDF {
       const sColors: Record<string, [number,number,number]> = { high: C.coral, medium: C.amber, low: C.green };
       const sc = sColors[issue.severity] || C.gray;
 
-      const titleLines = doc.splitTextToSize(issue.issue || "", INNER - 100);
+      // Row layout: chip on row1, title wraps full width on row2
+      const titleLines = doc.splitTextToSize(issue.issue || "", INNER - 24);
       const fixLines   = doc.splitTextToSize(`Fix: ${issue.fix || ""}`, INNER - 24);
       const impLines   = doc.splitTextToSize(`Revenue impact: ${issue.revenue_impact || ""}`, INNER - 24);
-      const h = titleLines.length * 12 + fixLines.length * 12 + impLines.length * 12 + 36;
+      const freqLines  = doc.splitTextToSize(`Frequency: ${issue.frequency || ""}`, INNER - 24);
+      const h = 16 + titleLines.length * 13 + fixLines.length * 12 + impLines.length * 12 + freqLines.length * 11 + 28;
       guard(h);
 
       doc.setFillColor(...C.card);
@@ -496,27 +498,34 @@ export function buildPDFReport(data: any, module: string): jsPDF {
       doc.setFillColor(...sc);
       doc.rect(MARGIN, y, 3, h, "F");
 
-      // Severity chip
+      // Row 1: severity chip
       chip(issue.severity?.toUpperCase() || "", sc, 0.2, MARGIN + 12, y + 14);
 
+      // Row 2: title — full width, wrapped
+      let iy = y + 24;
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...C.white);
-      doc.text(titleLines, MARGIN + 12 + doc.getTextWidth((issue.severity?.toUpperCase() || "") + "  ") + 6, y + 14);
+      doc.text(titleLines, MARGIN + 12, iy);
+      iy += titleLines.length * 13 + 6;
 
-      let iy = y + titleLines.length * 12 + 18;
-
+      // Fix
       doc.setFontSize(8);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(...C.gray);
       doc.text(fixLines, MARGIN + 12, iy);
       iy += fixLines.length * 12 + 5;
 
+      // Revenue impact
       doc.setFont("helvetica", "italic");
       doc.setTextColor(...C.dimgray);
       doc.text(impLines, MARGIN + 12, iy);
+      iy += impLines.length * 12 + 4;
+
+      // Frequency
       doc.setFontSize(7.5);
-      doc.text(`Frequency: ${issue.frequency || ""}`, W - MARGIN - 10, y + 14, { align: "right" });
+      doc.setTextColor(...C.dimgray);
+      doc.text(freqLines, MARGIN + 12, iy);
 
       y += h + 8;
     });
@@ -524,8 +533,10 @@ export function buildPDFReport(data: any, module: string): jsPDF {
     // ── Improvement Actions ──
     sectionHeader("Improvement Action Plan", C.orange);
     (data.improvement_actions || []).forEach((a: any, i: number) => {
-      const actionLines = doc.splitTextToSize(a.action || "", INNER - 60);
-      const impLines    = doc.splitTextToSize(a.impact || "", INNER - 60);
+      const ax = MARGIN + 36;
+      const textW = W - ax - MARGIN - 8;
+      const actionLines = doc.splitTextToSize(a.action || "", textW);
+      const impLines    = doc.splitTextToSize(a.impact || "", textW);
       const h = actionLines.length * 13 + impLines.length * 12 + 30;
       guard(h);
 
@@ -540,7 +551,6 @@ export function buildPDFReport(data: any, module: string): jsPDF {
       doc.setTextColor(...C.white);
       doc.text(`${i + 1}`, MARGIN + 20, y + h / 2 + 3, { align: "center" });
 
-      const ax = MARGIN + 36;
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...C.white);
