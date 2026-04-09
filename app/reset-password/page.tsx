@@ -1,20 +1,42 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
+
+  const [ready, setReady] = useState(false);
+  const [sessionError, setSessionError] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
 
-  // Supabase puts the session in the URL hash on redirect — this picks it up
   useEffect(() => {
-    supabase.auth.getSession();
+    // Supabase SSR sends ?code=xxx — exchange it for a session
+    const code = searchParams.get("code");
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (error) {
+          setSessionError("This reset link has expired or already been used. Please request a new one.");
+        } else {
+          setReady(true);
+        }
+      });
+    } else {
+      // Fallback: check if already has a session (hash-based older flow)
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session) {
+          setReady(true);
+        } else {
+          setSessionError("Invalid or expired reset link. Please request a new one.");
+        }
+      });
+    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,6 +73,18 @@ export default function ResetPasswordPage() {
               <div className="text-white font-bold mb-2">Password updated!</div>
               <p className="text-gray-400 text-sm">Redirecting you to the dashboard…</p>
             </div>
+          ) : sessionError ? (
+            <div className="text-center py-4">
+              <div className="text-4xl mb-4">⚠️</div>
+              <div className="text-white font-bold mb-2">Link expired</div>
+              <p className="text-gray-400 text-sm mb-6">{sessionError}</p>
+              <button onClick={() => router.push("/login")}
+                className="bg-orange hover:bg-orange/90 text-white font-semibold px-6 py-2.5 rounded-lg transition-colors text-sm">
+                Back to Login
+              </button>
+            </div>
+          ) : !ready ? (
+            <div className="text-center py-8 text-gray-400 text-sm">Verifying link…</div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
