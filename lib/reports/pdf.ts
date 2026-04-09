@@ -18,8 +18,8 @@ export function buildPDFReport(data: any, module: string): jsPDF {
     teal:     [0,   201, 167] as [number,number,number],
     purple:   [124, 111, 255] as [number,number,number],
     white:    [255, 255, 255] as [number,number,number],
-    gray:     [148, 163, 184] as [number,number,number],
-    dimgray:  [71,  85,  105] as [number,number,number],
+    gray:     [220, 228, 240] as [number,number,number],
+    dimgray:  [160, 175, 200] as [number,number,number],
   };
 
   const MARGIN = 40;
@@ -235,7 +235,7 @@ export function buildPDFReport(data: any, module: string): jsPDF {
     if (data.verdict_reason) {
       doc.setFontSize(8.5);
       doc.setFont("helvetica", "italic");
-      doc.setTextColor(...C.dimgray);
+      doc.setTextColor(...C.gray);
       const vlines = doc.splitTextToSize(`"${data.verdict_reason}"`, INNER);
       doc.text(vlines, MARGIN, y);
       y += vlines.length * 13 + 10;
@@ -246,12 +246,12 @@ export function buildPDFReport(data: any, module: string): jsPDF {
     (data.factors || []).forEach((f: any) => {
       scoreBar(f.name, f.value ? `${f.value}` : "", f.score, 10);
       if (f.note) {
-        doc.setFontSize(7.5);
-        doc.setFont("helvetica", "italic");
-        doc.setTextColor(...C.dimgray);
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(...C.gray);
         const nlines = doc.splitTextToSize(f.note, INNER - 100);
         doc.text(nlines, MARGIN, y);
-        y += nlines.length * 11 + 4;
+        y += nlines.length * 12 + 4;
       }
     });
 
@@ -441,12 +441,12 @@ export function buildPDFReport(data: any, module: string): jsPDF {
     (data.sentiment_categories || []).forEach((c: any) => {
       scoreBar(`${c.category}`, `${c.positive_pct}% positive`, c.score, 10);
       if (c.summary) {
-        doc.setFontSize(7.5);
-        doc.setFont("helvetica", "italic");
-        doc.setTextColor(...C.dimgray);
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(...C.gray);
         const sl = doc.splitTextToSize(c.summary, INNER - 100);
         doc.text(sl, MARGIN, y);
-        y += sl.length * 11 + 5;
+        y += sl.length * 12 + 6;
       }
     });
 
