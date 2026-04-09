@@ -135,6 +135,12 @@ export default async function AdminPage() {
           <Link href="/dashboard" className="text-gray-400 hover:text-white text-sm transition-colors">
             ← Dashboard
           </Link>
+          <form action="/api/auth/signout" method="POST">
+            <button type="submit"
+              className="text-sm px-4 py-1.5 rounded-lg border border-brd/60 text-gray-400 hover:text-white hover:border-gray-500 transition-colors">
+              Sign Out
+            </button>
+          </form>
         </div>
       </div>
 

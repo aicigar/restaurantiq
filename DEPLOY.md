@@ -119,6 +119,31 @@ Go through each item and confirm it works:
 
 ---
 
+## Step 9 — Access the Admin Dashboard
+
+### Local (dev preview)
+1. Open `.env.local` in your project folder
+2. Find `ADMIN_EMAIL=` and set it to your email:
+   ```
+   ADMIN_EMAIL=you@gmail.com
+   ```
+3. Restart dev server (`npm run dev`)
+4. Log in, then go to `http://localhost:3000/admin`
+
+### Production (Vercel)
+1. Go to vercel.com/dashboard → your `restaurantiq` project
+2. Click **Settings → Environment Variables**
+3. Add new variable:
+   - Key: `ADMIN_EMAIL`
+   - Value: `you@gmail.com` (same email you use to log in)
+4. Click **Save**
+5. Go to **Deployments** tab → 3 dots on latest deploy → **Redeploy**
+6. Once live, go to `https://your-vercel-url.vercel.app/admin`
+
+> Any email other than `ADMIN_EMAIL` is redirected to the regular dashboard — no one else can access `/admin`.
+
+---
+
 ## Optional — Custom domain
 1. Vercel → your project → **Settings → Domains**
 2. Add your domain (e.g. `restaurantiq.com`)

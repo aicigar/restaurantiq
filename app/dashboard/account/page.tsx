@@ -64,9 +64,17 @@ export default async function AccountPage() {
             <div className="text-gray-500 text-xs">{user.email}</div>
           </div>
         </div>
-        <Link href="/dashboard" className="text-gray-400 hover:text-white text-sm transition-colors">
-          ← Back to Dashboard
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard" className="text-gray-400 hover:text-white text-sm transition-colors">
+            ← Back to Dashboard
+          </Link>
+          <form action="/api/auth/signout" method="POST">
+            <button type="submit"
+              className="text-sm px-4 py-1.5 rounded-lg border border-brd/60 text-gray-400 hover:text-white hover:border-gray-500 transition-colors">
+              Sign Out
+            </button>
+          </form>
+        </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
