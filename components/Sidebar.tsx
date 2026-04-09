@@ -66,6 +66,7 @@ export default function Sidebar({ activeModule, onModuleChange }: SidebarProps) 
       {/* Bottom actions */}
       {[
         { icon: "📋", label: "Report History", action: () => router.push("/dashboard/history") },
+        { icon: "👤", label: "My Account", action: () => router.push("/dashboard/account") },
         { icon: "⚙️", label: "Billing & Settings", action: handlePortal },
         { icon: "🚪", label: "Sign Out", action: handleSignOut },
       ].map((btn) => (

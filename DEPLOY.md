@@ -65,6 +65,7 @@ Add all of these (Key = left, Value = right):
 | `STRIPE_PRICE_CHAIN` | Stripe → Products → Chain plan → copy Price ID (price_xxx) |
 | `RESEND_API_KEY` | resend.com → API Keys |
 | `NEXT_PUBLIC_APP_URL` | Your Vercel URL e.g. `https://restaurantiq.vercel.app` |
+| `ADMIN_EMAIL` | Your email address — only this email can access `/admin` |
 
 After saving → go to **Deployments** tab → 3 dots on latest → **Redeploy**
 
