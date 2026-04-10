@@ -3,14 +3,15 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 interface SidebarProps {
-  activeModule: "location" | "reviews" | "competitors";
-  onModuleChange: (module: "location" | "reviews" | "competitors") => void;
+  activeModule: "location" | "reviews" | "competitors" | "advisor";
+  onModuleChange: (module: "location" | "reviews" | "competitors" | "advisor") => void;
 }
 
 const modules = [
-  { id: "location"    as const, icon: "📍", label: "Location Scorer",  color: "rgba(255,107,53,0.25)",  ring: "rgba(255,107,53,0.6)" },
-  { id: "reviews"     as const, icon: "⭐", label: "Review Analyzer",   color: "rgba(0,201,167,0.2)",    ring: "rgba(0,201,167,0.6)"  },
-  { id: "competitors" as const, icon: "🔍", label: "Competitor Radar",  color: "rgba(255,77,109,0.2)",   ring: "rgba(255,77,109,0.6)" },
+  { id: "location"    as const, icon: "📍", label: "Location Scorer",       color: "rgba(255,107,53,0.25)",  ring: "rgba(255,107,53,0.6)" },
+  { id: "reviews"     as const, icon: "⭐", label: "Review Analyzer",        color: "rgba(0,201,167,0.2)",    ring: "rgba(0,201,167,0.6)"  },
+  { id: "competitors" as const, icon: "🔍", label: "Competitor Radar",       color: "rgba(255,77,109,0.2)",   ring: "rgba(255,77,109,0.6)" },
+  { id: "advisor"     as const, icon: "🧠", label: "AI Improvement Advisor", color: "rgba(255,181,71,0.25)",  ring: "rgba(255,181,71,0.6)" },
 ];
 
 export default function Sidebar({ activeModule, onModuleChange }: SidebarProps) {

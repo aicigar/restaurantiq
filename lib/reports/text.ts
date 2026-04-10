@@ -145,6 +145,72 @@ export function buildTextReport(data: any, module: string): string {
     lines.push("");
     lines.push("Delivery Landscape:");
     lines.push(data.delivery_landscape || "");
+  } else if (module === "advisor") {
+    lines.push(`RESTAURANT:   ${data.restaurant_name}`);
+    lines.push(`CITY:         ${data.city}`);
+    lines.push(`HEALTH SCORE: ${data.overall_health_score}/100`);
+    lines.push(`DATE:         ${data.analysis_date}`);
+    lines.push("");
+    lines.push(subDivider);
+    lines.push("SUMMARY");
+    lines.push(subDivider);
+    lines.push(data.summary || "");
+    lines.push("");
+    lines.push(subDivider);
+    lines.push("RANKED ACTION PLAN");
+    lines.push(subDivider);
+    (data.action_items || []).forEach((item: any) => {
+      lines.push(`  #${item.rank} [${item.category?.toUpperCase()}] — ${item.effort?.toUpperCase()} effort`);
+      lines.push(`  PROBLEM:  ${item.problem}`);
+      lines.push(`  EVIDENCE: ${item.evidence}`);
+      lines.push(`  FIX:      ${item.fix}`);
+      lines.push(`  IMPACT:   ${item.estimated_impact}`);
+      lines.push(`  WHEN:     ${item.timeframe}`);
+      lines.push("");
+    });
+    if (data.competitor_intelligence) {
+      const ci = data.competitor_intelligence;
+      lines.push(subDivider);
+      lines.push("COMPETITOR INTELLIGENCE");
+      lines.push(subDivider);
+      lines.push(`  Competitor:    ${ci.competitor_name}`);
+      lines.push(`  Their Rating:  ${ci.their_rating}/5`);
+      lines.push(`  Recent Trend:  ${ci.their_recent_trend}`);
+      lines.push(`  Weaknesses:`);
+      (ci.their_top_weaknesses || []).forEach((w: string) => lines.push(`    → ${w}`));
+      lines.push(`  Your Window:   ${ci.your_window}`);
+      lines.push("");
+    }
+    if (data.delivery_gaps?.length) {
+      lines.push(subDivider);
+      lines.push("DELIVERY COVERAGE GAPS");
+      lines.push(subDivider);
+      data.delivery_gaps.forEach((gap: any) => {
+        lines.push(`  Zip: ${gap.zip_code} (${gap.distance_miles} mi)`);
+        lines.push(`  Note: ${gap.population_note}`);
+        lines.push(`  Est. Revenue: ${gap.estimated_monthly_revenue}`);
+        lines.push(`  Action: ${gap.action}`);
+        lines.push("");
+      });
+    }
+    lines.push(subDivider);
+    lines.push("QUICK WINS — DO TODAY (zero cost)");
+    lines.push(subDivider);
+    (data.quick_wins || []).forEach((w: string, i: number) => {
+      lines.push(`  ${i + 1}. ${w}`);
+    });
+    lines.push("");
+    if (data.suggested_responses?.length) {
+      lines.push(subDivider);
+      lines.push(`REVIEW RESPONSES (${data.review_response_needed} unanswered)`);
+      lines.push(subDivider);
+      data.suggested_responses.forEach((sr: any, i: number) => {
+        lines.push(`  ${i + 1}. Reviewer said: "${sr.review_summary}"`);
+        lines.push(`     Your response:`);
+        lines.push(`     ${sr.suggested_response}`);
+        lines.push("");
+      });
+    }
   }
 
   lines.push("");

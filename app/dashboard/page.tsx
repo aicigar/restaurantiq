@@ -4,8 +4,9 @@ import Sidebar from "@/components/Sidebar";
 import LocationScorer from "@/components/modules/LocationScorer";
 import ReviewAnalyzer from "@/components/modules/ReviewAnalyzer";
 import CompetitorRadar from "@/components/modules/CompetitorRadar";
+import AdvisorModule from "@/components/modules/AdvisorModule";
 
-type Module = "location" | "reviews" | "competitors";
+type Module = "location" | "reviews" | "competitors" | "advisor";
 
 export default function DashboardPage() {
   const [activeModule, setActiveModule] = useState<Module>("location");
@@ -14,9 +15,10 @@ export default function DashboardPage() {
     <div className="flex h-screen overflow-hidden bg-navy">
       <Sidebar activeModule={activeModule} onModuleChange={setActiveModule} />
       <div className="flex-1 overflow-hidden">
-        {activeModule === "location" && <LocationScorer />}
-        {activeModule === "reviews" && <ReviewAnalyzer />}
+        {activeModule === "location"    && <LocationScorer />}
+        {activeModule === "reviews"     && <ReviewAnalyzer />}
         {activeModule === "competitors" && <CompetitorRadar />}
+        {activeModule === "advisor"     && <AdvisorModule />}
       </div>
     </div>
   );

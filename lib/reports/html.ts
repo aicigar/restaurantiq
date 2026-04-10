@@ -245,6 +245,120 @@ export function buildHTMLReport(data: any, module: string): string {
         <p style="color:#CBD5E1;margin:0;font-size:14px;line-height:1.6;">${data.delivery_landscape}</p>
       </div>
     `;
+  } else if (module === "advisor") {
+    const rankColor = (rank: number) =>
+      rank === 1 ? "#FF4D6D" : rank === 2 ? "#FFB547" : "#00C9A7";
+    const catColor: Record<string, string> = {
+      reviews: "#00C9A7", operations: "#FFB547", delivery: "#A78BFA",
+      competitive: "#FF4D6D", marketing: "#3B82F6",
+    };
+    const effortColor: Record<string, string> = { easy: "#22C55E", moderate: "#FFB547", hard: "#FF4D6D" };
+
+    body = `
+      <div style="display:flex;align-items:center;gap:24px;margin-bottom:24px;padding:20px;background:#1A2540;border-radius:12px;border:1px solid rgba(255,181,71,0.3);">
+        ${scoreCircle(data.overall_health_score)}
+        <div>
+          <div style="color:#FFB547;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">AI Health Score</div>
+          <h2 style="color:white;margin:0 0 4px;font-size:22px;">${data.restaurant_name}</h2>
+          <div style="color:#8B9BB4;font-size:13px;margin-bottom:8px;">${data.city} · ${data.analysis_date}</div>
+          <p style="color:#CBD5E1;margin:0;font-size:13px;line-height:1.6;">${data.summary}</p>
+        </div>
+      </div>
+
+      <h3 style="color:white;margin:0 0 12px;font-size:16px;">🎯 Ranked Action Plan</h3>
+      <div style="margin-bottom:24px;">
+        ${(data.action_items || []).map((item: any) => `
+          <div style="background:#1A2540;border-radius:12px;margin-bottom:12px;overflow:hidden;border:1px solid #1E2D4A;">
+            <div style="padding:16px;">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                <div style="width:32px;height:32px;border-radius:50%;background:${rankColor(item.rank)};display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;flex-shrink:0;">${item.rank}</div>
+                <span style="background:${catColor[item.category] || "#8B9BB4"}18;color:${catColor[item.category] || "#8B9BB4"};border:1px solid ${catColor[item.category] || "#8B9BB4"}40;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:capitalize;">${item.category}</span>
+              </div>
+              <div style="color:white;font-weight:700;font-size:14px;margin-bottom:6px;">${item.problem}</div>
+              <div style="color:#8B9BB4;font-size:12px;font-style:italic;margin-bottom:10px;">${item.evidence}</div>
+              <div style="display:flex;gap:6px;margin-bottom:12px;">
+                <span style="color:#00C9A7;font-size:12px;font-weight:700;flex-shrink:0;">FIX →</span>
+                <span style="color:#CBD5E1;font-size:13px;">${item.fix}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <span style="color:#FFB547;font-weight:700;font-size:13px;">💰 ${item.estimated_impact}</span>
+                <span style="background:${effortColor[item.effort] || "#8B9BB4"}18;color:${effortColor[item.effort] || "#8B9BB4"};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">${item.effort}</span>
+                <span style="color:#8B9BB4;font-size:12px;">${item.timeframe}</span>
+              </div>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+
+      ${data.competitor_intelligence ? `
+        <h3 style="color:white;margin:0 0 12px;font-size:16px;">🔍 Competitor Intelligence</h3>
+        <div style="background:#1A2540;border-radius:12px;margin-bottom:24px;padding:20px;border-left:4px solid #FF4D6D;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <div style="color:white;font-weight:700;font-size:16px;">${data.competitor_intelligence.competitor_name}</div>
+            <span style="color:#FFB547;font-weight:600;">⭐ ${data.competitor_intelligence.their_rating}/5</span>
+            <span style="background:rgba(255,181,71,0.1);color:#FFB547;padding:2px 8px;border-radius:10px;font-size:11px;">${data.competitor_intelligence.their_recent_trend}</span>
+          </div>
+          <div style="margin-bottom:14px;">
+            <div style="color:#8B9BB4;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Their Weaknesses</div>
+            ${(data.competitor_intelligence.their_top_weaknesses || []).map((w: string) =>
+              `<div style="display:flex;gap:6px;color:#CBD5E1;font-size:13px;margin-bottom:6px;"><span style="color:#FF4D6D;">→</span>${w}</div>`
+            ).join("")}
+          </div>
+          <div style="background:rgba(0,201,167,0.08);border:1px solid rgba(0,201,167,0.2);border-radius:8px;padding:12px;">
+            <div style="color:#00C9A7;font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Your Window Right Now</div>
+            <div style="color:#CBD5E1;font-size:13px;">${data.competitor_intelligence.your_window}</div>
+          </div>
+        </div>
+      ` : ""}
+
+      ${data.delivery_gaps?.length ? `
+        <h3 style="color:white;margin:0 0 12px;font-size:16px;">📦 Delivery Coverage Gaps</h3>
+        <div style="margin-bottom:24px;">
+          ${data.delivery_gaps.map((gap: any) => `
+            <div style="background:#1A2540;border-radius:12px;padding:16px;margin-bottom:10px;border-left:4px solid #A78BFA;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <div><span style="color:white;font-weight:700;font-size:18px;">${gap.zip_code}</span><span style="color:#8B9BB4;font-size:13px;margin-left:8px;">${gap.distance_miles} mi away</span></div>
+                <span style="color:#22C55E;font-weight:700;font-size:15px;">${gap.estimated_monthly_revenue}</span>
+              </div>
+              <div style="color:#8B9BB4;font-size:13px;margin-bottom:6px;">${gap.population_note}</div>
+              <div style="color:#00C9A7;font-size:13px;">→ ${gap.action}</div>
+            </div>
+          `).join("")}
+        </div>
+      ` : ""}
+
+      <h3 style="color:white;margin:0 0 4px;font-size:16px;">⚡ Quick Wins — Do Today</h3>
+      <div style="color:#8B9BB4;font-size:12px;margin-bottom:12px;">Zero cost · Immediate impact</div>
+      <div style="margin-bottom:24px;">
+        ${(data.quick_wins || []).map((win: string) => `
+          <div style="display:flex;gap:10px;align-items:flex-start;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:12px;margin-bottom:8px;">
+            <div style="width:18px;height:18px;border:2px solid rgba(34,197,94,0.4);border-radius:4px;flex-shrink:0;margin-top:1px;"></div>
+            <span style="color:#CBD5E1;font-size:13px;">${win}</span>
+          </div>
+        `).join("")}
+      </div>
+
+      ${data.suggested_responses?.length ? `
+        <div style="background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.25);border-radius:10px;padding:14px;margin-bottom:16px;display:flex;gap:12px;align-items:center;">
+          <span style="font-size:24px;">💬</span>
+          <div>
+            <div style="color:white;font-weight:700;">You have ${data.review_response_needed} unanswered negative reviews</div>
+            <div style="color:#8B9BB4;font-size:12px;">Responding lifts average rating by ~0.2 stars within 90 days</div>
+          </div>
+        </div>
+        <h3 style="color:white;margin:0 0 12px;font-size:16px;">Suggested Review Responses</h3>
+        <div style="margin-bottom:24px;">
+          ${data.suggested_responses.map((sr: any) => `
+            <div style="background:#1A2540;border-radius:12px;padding:16px;margin-bottom:12px;">
+              <div style="color:#8B9BB4;font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Reviewer said:</div>
+              <div style="color:#8B9BB4;font-size:13px;font-style:italic;margin-bottom:12px;">"${sr.review_summary}"</div>
+              <div style="color:#8B9BB4;font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:6px;">Your response:</div>
+              <div style="background:#0B1120;border:1px solid #1E2D4A;border-radius:8px;padding:12px;color:#CBD5E1;font-size:13px;line-height:1.6;font-family:monospace;">${sr.suggested_response}</div>
+            </div>
+          `).join("")}
+        </div>
+      ` : ""}
+    `;
   }
 
   return `
