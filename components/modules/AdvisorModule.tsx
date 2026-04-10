@@ -57,7 +57,7 @@ export default function AdvisorModule() {
   const toggleExpand = (rank: number) => {
     setExpandedRanks((prev) => {
       const next = new Set(prev);
-      next.has(rank) ? next.delete(rank) : next.add(rank);
+      if (next.has(rank)) { next.delete(rank); } else { next.add(rank); }
       return next;
     });
   };
