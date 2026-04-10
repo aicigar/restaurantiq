@@ -32,9 +32,8 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const base = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${base}/reset-password`,
+      redirectTo: `${window.location.origin}/reset-password`,
     });
     setLoading(false);
     if (error) {
