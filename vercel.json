@@ -1,5 +1,8 @@
 {
   "functions": {
-    "app/api/analyse/**": { "maxDuration": 60 }
+    "app/api/analyse/location/**":    { "maxDuration": 60 },
+    "app/api/analyse/reviews/**":     { "maxDuration": 60 },
+    "app/api/analyse/competitors/**": { "maxDuration": 60 },
+    "app/api/analyse/advisor/**":     { "maxDuration": 120 }
   }
 }

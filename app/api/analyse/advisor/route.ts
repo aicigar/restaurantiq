@@ -95,7 +95,7 @@ QUALITY STANDARD — every action item must be this specific:
 
 Generate at least 5 action items. Be hyper-specific with real data from your search.`;
 
-    const rawText = await callClaudeWithSearch(userPrompt, systemPrompt);
+    const rawText = await callClaudeWithSearch(userPrompt, systemPrompt, 6);
 
     let result: any;
     try {

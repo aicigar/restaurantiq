@@ -163,7 +163,7 @@ export default function AdvisorModule() {
             <div className="flex flex-col items-center justify-center h-full text-center">
               <div className="w-16 h-16 rounded-full mb-6 animate-spin" style={{ border: "3px solid rgba(30,45,74,0.8)", borderTopColor: "#FFB547" }} />
               <h3 className="text-white text-lg font-bold mb-2">Running deep analysis...</h3>
-              <p className="text-gray-500 text-sm mb-6">Searching reviews, benchmarking competitors, checking delivery gaps.</p>
+              <p className="text-gray-500 text-sm mb-6">Searching reviews, benchmarking competitors, checking delivery gaps. Takes 60–90 seconds.</p>
               <div className="space-y-2 text-left max-w-xs w-full">
                 {["Scanning Google, Yelp, DoorDash, Uber Eats...", "Benchmarking competitor ratings...", "Checking delivery coverage gaps...", "Generating ranked action plan..."].map((step, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs text-gray-500">
