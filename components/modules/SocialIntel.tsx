@@ -47,8 +47,10 @@ export default function SocialIntel() {
   const [seasonalCampaign, setSeasonalCampaign] = useState<"none"|"ramadan"|"eid">("none");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SocialAnalysisResult | null>(null);
+  const [calendarReady, setCalendarReady] = useState(false);
   const [error, setError] = useState<any>(null);
-  const [status, setStatus] = useState<"idle"|"loading"|"done"|"error">("idle");
+  const [status, setStatus] = useState<"idle"|"loading"|"phase1done"|"done"|"error">("idle");
+  const [statusMsg, setStatusMsg] = useState("");
   const [activeTab, setActiveTab] = useState<ActiveTab>("analysis");
   const [elapsed, setElapsed] = useState(0);
   const [activeStep, setActiveStep] = useState(0);
@@ -57,12 +59,11 @@ export default function SocialIntel() {
   const handleRun = async () => {
     if (!restaurantName.trim() || !city.trim()) return;
     setLoading(true); setStatus("loading"); setError(null); setResult(null);
+    setCalendarReady(false); setStatusMsg("Searching social profiles & competitors...");
     setElapsed(0); setActiveStep(0);
     elapsedRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
-    const stepTimes = [15000, 35000, 60000];
-    stepTimes.forEach((t, i) => setTimeout(() => setActiveStep(i + 1), t));
 
-    const done = () => {
+    const finish = () => {
       if (elapsedRef.current) clearInterval(elapsedRef.current);
       setLoading(false);
     };
@@ -83,17 +84,16 @@ export default function SocialIntel() {
         }),
       });
 
-      // Non-2xx before streaming starts = JSON error (auth, plan limit, etc.)
       if (!res.ok) {
         const data = await res.json();
-        done(); setError(data); setStatus("error");
+        finish(); setError(data); setStatus("error");
         return;
       }
 
-      // Consume SSE stream
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let phase1Data: any = null;
 
       while (true) {
         const { done: streamDone, value } = await reader.read();
@@ -107,24 +107,48 @@ export default function SocialIntel() {
           if (!part.startsWith("data: ")) continue;
           try {
             const msg = JSON.parse(part.slice(6));
+
+            if (msg.type === "status") {
+              setStatusMsg(msg.message);
+              if (msg.step === 2) setActiveStep(1);
+            }
+
+            if (msg.type === "phase1") {
+              // Show core intel immediately — don't wait for calendar
+              phase1Data = msg.data;
+              setResult(phase1Data);
+              setStatus("phase1done");
+              setActiveTab("analysis");
+              setActiveStep(2);
+              setStatusMsg("Building content calendar & growth plan...");
+            }
+
             if (msg.type === "error") {
-              done(); setError({ error: msg.error, code: msg.code }); setStatus("error");
+              finish(); setError({ error: msg.error, code: msg.code }); setStatus("error");
               return;
             }
+
             if (msg.type === "done") {
-              done(); setResult({ ...msg.result, reportId: msg.reportId }); setStatus("done"); setActiveTab("analysis");
+              finish();
+              setResult({ ...msg.result, reportId: msg.reportId });
+              setCalendarReady(true);
+              setStatus("done");
+              setActiveTab("analysis");
               return;
             }
           } catch {
-            // malformed SSE chunk, keep going
+            // malformed chunk, keep going
           }
         }
       }
 
-      // Stream ended without a done event
-      done(); setError({ error: "No response received. Please try again.", code: "API_ERROR" }); setStatus("error");
+      finish();
+      if (!phase1Data) {
+        setError({ error: "No response received. Please try again.", code: "API_ERROR" });
+        setStatus("error");
+      }
     } catch (err: any) {
-      done();
+      finish();
       setError({ error: err.message || "Network error", code: "API_ERROR" });
       setStatus("error");
     }
@@ -254,17 +278,18 @@ export default function SocialIntel() {
       <div className="flex-1 flex flex-col min-w-0" style={{ background: "linear-gradient(160deg, #060C18 0%, #0A1020 60%, #0D1428 100%)" }}>
         {/* Status bar */}
         <div className="px-6 py-3.5 border-b border-brd/60 flex items-center gap-3" style={{ background: "rgba(15,22,38,0.8)" }}>
-          <div className={`w-2 h-2 rounded-full ${status === "loading" ? "animate-pulse" : ""}`}
-            style={{ background: status === "idle" ? "#2A3A5C" : status === "loading" ? "#E040FB" : status === "done" ? "#00C9A7" : "#FF4D6D" }} />
+          <div className={`w-2 h-2 rounded-full ${status === "loading" || status === "phase1done" ? "animate-pulse" : ""}`}
+            style={{ background: status === "idle" ? "#2A3A5C" : status === "loading" ? "#E040FB" : status === "phase1done" ? "#FFB547" : status === "done" ? "#00C9A7" : "#FF4D6D" }} />
           <span className="text-gray-400 text-sm">
             {status === "idle" ? "Ready"
-              : status === "loading" ? "Searching social profiles, competitors, trending content..."
+              : status === "loading" ? statusMsg
+              : status === "phase1done" ? `Core analysis ready · ${statusMsg}`
               : status === "done" ? `Analysis complete — ${result?.restaurant_name}`
               : "Analysis failed"}
           </span>
 
-          {/* Tab switcher (show after results) */}
-          {status === "done" && result && (
+          {/* Tab switcher (show once phase 1 is done) */}
+          {(status === "done" || status === "phase1done") && result && (
             <div className="ml-auto flex gap-1">
               {(["analysis","calendar","tools"] as ActiveTab[]).map((tab) => (
                 <button key={tab} onClick={() => setActiveTab(tab)}
@@ -292,7 +317,7 @@ export default function SocialIntel() {
           )}
 
           {/* ── Loading ── */}
-          {status === "loading" && (
+          {(status === "loading") && (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <div className="relative mb-8">
                 <div className="w-20 h-20 rounded-full relative"
@@ -379,7 +404,7 @@ export default function SocialIntel() {
           )}
 
           {/* ── Results ── */}
-          {status === "done" && result && (
+          {(status === "done" || status === "phase1done") && result && (
             <>
               {/* Analysis tab */}
               {activeTab === "analysis" && (
@@ -456,8 +481,17 @@ export default function SocialIntel() {
               {/* Calendar tab */}
               {activeTab === "calendar" && (
                 <div className="max-w-full">
-                  <h3 className="text-white font-bold text-base mb-4">📅 4-Week Content Calendar</h3>
-                  <ContentCalendar calendar={result.content_calendar} restaurant_name={result.restaurant_name} />
+                  {status === "phase1done" ? (
+                    <div className="flex flex-col items-center justify-center py-20 gap-4">
+                      <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "rgba(224,64,251,0.3)", borderTopColor: "#E040FB" }} />
+                      <p className="text-gray-400 text-sm">Building your content calendar...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <h3 className="text-white font-bold text-base mb-4">📅 Content Calendar</h3>
+                      <ContentCalendar calendar={result.content_calendar} restaurant_name={result.restaurant_name} />
+                    </>
+                  )}
                 </div>
               )}
 
@@ -484,7 +518,7 @@ export default function SocialIntel() {
           )}
         </div>
 
-        {status === "done" && result && <ExportToolbar result={result} module="social" reportId={(result as any).reportId} />}
+        {(status === "done" || status === "phase1done") && result && <ExportToolbar result={result} module="social" reportId={(result as any).reportId} />}
       </div>
     </div>
   );
