@@ -2,14 +2,16 @@ import { Resend } from "resend";
 import { buildHTMLReport } from "@/lib/reports/html";
 import { buildTextReport } from "@/lib/reports/text";
 
-const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
-
 export async function sendReportEmail(
   to: string,
   subject: string,
   reportData: any,
   module: string
 ): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error("Email service not configured. Please contact support.");
+
+  const resend = new Resend(apiKey);
   const htmlContent = buildHTMLReport(reportData, module);
   const textContent = buildTextReport(reportData, module);
 
@@ -36,7 +38,7 @@ export async function sendReportEmail(
   `;
 
   await resend.emails.send({
-    from: "RestaurantIQ Reports <reports@restaurantiq.com>",
+    from: "RestaurantIQ <onboarding@resend.dev>",
     to,
     subject,
     html: emailHtml,

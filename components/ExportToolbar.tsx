@@ -67,7 +67,11 @@ export default function ExportToolbar({ result, module, reportId }: ExportToolba
   };
 
   const handleEmailSend = async () => {
-    if (!emailTo || !reportId) return;
+    if (!emailTo) return;
+    if (!reportId) {
+      setEmailStatus("Report ID missing — please re-run the analysis and try again.");
+      return;
+    }
     setEmailSending(true);
     setEmailStatus("");
     const title = result.location_name || result.restaurant_name || result.location || "Report";

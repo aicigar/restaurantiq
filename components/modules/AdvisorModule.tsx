@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import ScoreRing from "@/components/ScoreRing";
 import ExportToolbar from "@/components/ExportToolbar";
 
@@ -34,10 +34,21 @@ export default function AdvisorModule() {
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [expandedRanks, setExpandedRanks] = useState<Set<number>>(new Set());
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [elapsed, setElapsed] = useState(0);
+  const [activeStep, setActiveStep] = useState(0);
+  const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stepRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleRun = async () => {
     if (!restaurantName.trim() || !city.trim()) return;
     setLoading(true); setStatus("loading"); setError(null); setResult(null);
+    setElapsed(0); setActiveStep(0);
+    elapsedRef.current = setInterval(() => setElapsed(s => s + 1), 1000);
+    // Advance steps: 0→1 at 8s, 1→2 at 20s, 2→3 at 35s
+    const stepTimes = [8000, 20000, 35000];
+    stepTimes.forEach((t, i) => {
+      setTimeout(() => setActiveStep(i + 1), t);
+    });
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 95000); // 95s client timeout
@@ -56,11 +67,13 @@ export default function AdvisorModule() {
       });
       clearTimeout(timeoutId);
       const data = await res.json();
+      if (elapsedRef.current) clearInterval(elapsedRef.current);
       setLoading(false);
       if (!res.ok) { setError(data); setStatus("error"); }
       else { setResult(data); setStatus("done"); }
     } catch (err: any) {
       clearTimeout(timeoutId);
+      if (elapsedRef.current) clearInterval(elapsedRef.current);
       setLoading(false);
       if (err.name === "AbortError") {
         setError({ error: "Analysis timed out after 90 seconds. Try again — results vary by restaurant name recognition.", code: "TIMEOUT" });
@@ -155,7 +168,7 @@ export default function AdvisorModule() {
       </div>
 
       {/* ── Output Panel ── */}
-      <div className="flex-1 flex flex-col min-w-0" style={{ background: "linear-gradient(160deg, #080D1A 0%, #0A1020 100%)" }}>
+      <div className="flex-1 flex flex-col min-w-0" style={{ background: "linear-gradient(160deg, #060C18 0%, #0A1020 60%, #0D1428 100%)" }}>
         <div className="px-6 py-3.5 border-b border-brd/60 flex items-center gap-3" style={{ background: "rgba(15,22,38,0.8)" }}>
           <div className={`w-2 h-2 rounded-full ${status === "loading" ? "animate-pulse" : ""}`}
             style={{ background: status === "idle" ? "#2A3A5C" : status === "loading" ? "#FFB547" : status === "done" ? "#00C9A7" : "#FF4D6D" }} />
@@ -177,18 +190,102 @@ export default function AdvisorModule() {
 
           {/* ── Loading ── */}
           {status === "loading" && (
-            <div className="flex flex-col items-center justify-center h-full text-center">
-              <div className="w-16 h-16 rounded-full mb-6 animate-spin" style={{ border: "3px solid rgba(30,45,74,0.8)", borderTopColor: "#FFB547" }} />
-              <h3 className="text-white text-lg font-bold mb-2">Running deep analysis...</h3>
-              <p className="text-gray-500 text-sm mb-6">Running 3 live searches then generating your action plan. Usually 30–60 seconds.</p>
-              <div className="space-y-2 text-left max-w-xs w-full">
-                {["Searching reviews on Google, Yelp, DoorDash...", "Benchmarking competitor ratings...", "Checking delivery gaps...", "Writing ranked action plan..."].map((step, i) => (
-                  <div key={i} className="flex items-center gap-2 text-xs text-gray-500">
-                    <span className="w-4 h-4 rounded-full animate-pulse flex-shrink-0" style={{ background: "rgba(255,181,71,0.3)" }} />
-                    {step}
-                  </div>
-                ))}
+            <div className="relative flex flex-col items-center justify-center h-full text-center overflow-hidden">
+              {/* Animated background orbs */}
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full opacity-10 animate-pulse"
+                  style={{ background: "radial-gradient(circle, #FFB547, transparent)", filter: "blur(40px)", animationDuration: "3s" }} />
+                <div className="absolute bottom-1/4 right-1/4 w-48 h-48 rounded-full opacity-8 animate-pulse"
+                  style={{ background: "radial-gradient(circle, #00C9A7, transparent)", filter: "blur(50px)", animationDuration: "4s", animationDelay: "1s" }} />
+                <div className="absolute top-1/2 right-1/3 w-32 h-32 rounded-full opacity-6 animate-pulse"
+                  style={{ background: "radial-gradient(circle, #FF4D6D, transparent)", filter: "blur(35px)", animationDuration: "5s", animationDelay: "2s" }} />
+                {/* Subtle grid */}
+                <div className="absolute inset-0 opacity-3"
+                  style={{ backgroundImage: "linear-gradient(rgba(255,181,71,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,181,71,0.05) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
               </div>
+
+              {/* Central spinner ring */}
+              <div className="relative mb-8">
+                {/* Outer glow ring */}
+                <div className="absolute inset-0 rounded-full animate-ping opacity-20"
+                  style={{ background: "conic-gradient(#FFB547, #FF6B35, transparent)", animationDuration: "2s" }} />
+                {/* Main spinner */}
+                <div className="w-20 h-20 rounded-full relative"
+                  style={{ border: "2px solid rgba(30,45,74,0.6)", borderTopColor: "#FFB547", borderRightColor: "rgba(255,181,71,0.4)", animation: "spin 1.2s linear infinite" }} />
+                {/* Inner pulsing dot */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full animate-pulse flex items-center justify-center text-lg"
+                    style={{ background: "linear-gradient(135deg, rgba(255,181,71,0.2), rgba(255,107,53,0.1))", border: "1px solid rgba(255,181,71,0.3)" }}>
+                    🧠
+                  </div>
+                </div>
+              </div>
+
+              <h3 className="text-white text-xl font-bold mb-1">Running deep analysis...</h3>
+              <p className="text-gray-500 text-sm mb-1">Live data · 3 searches · AI synthesis</p>
+
+              {/* Elapsed time */}
+              <div className="mb-7">
+                <span className="text-xs font-mono px-3 py-1 rounded-full"
+                  style={{ background: "rgba(255,181,71,0.08)", border: "1px solid rgba(255,181,71,0.2)", color: "#FFB547" }}>
+                  {elapsed < 60 ? `${elapsed}s elapsed` : `${Math.floor(elapsed / 60)}m ${elapsed % 60}s elapsed`}
+                </span>
+              </div>
+
+              {/* Animated steps */}
+              <div className="space-y-3 text-left w-full max-w-sm">
+                {[
+                  { label: "Searching reviews on Google, Yelp & DoorDash", icon: "🔍", color: "#FFB547" },
+                  { label: "Benchmarking competitor ratings & trends", icon: "📊", color: "#00C9A7" },
+                  { label: "Checking delivery coverage gaps by zip", icon: "📦", color: "#A78BFA" },
+                  { label: "Writing ranked action plan with revenue impact", icon: "✍️", color: "#22C55E" },
+                ].map((step, i) => {
+                  const done   = i < activeStep;
+                  const active = i === activeStep;
+                  const future = i > activeStep;
+                  return (
+                    <div key={i} className="flex items-center gap-3 rounded-xl px-4 py-3 transition-all duration-500"
+                      style={{
+                        background: done ? "rgba(34,197,94,0.06)" : active ? `${step.color}10` : "rgba(22,32,56,0.4)",
+                        border: `1px solid ${done ? "rgba(34,197,94,0.2)" : active ? `${step.color}35` : "rgba(30,45,74,0.5)"}`,
+                        opacity: future ? 0.4 : 1,
+                        transform: active ? "scale(1.02)" : "scale(1)",
+                      }}>
+                      {/* Status icon */}
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs"
+                        style={{
+                          background: done ? "rgba(34,197,94,0.2)" : active ? `${step.color}20` : "rgba(30,45,74,0.8)",
+                          border: `1px solid ${done ? "rgba(34,197,94,0.5)" : active ? `${step.color}50` : "rgba(30,45,74,0.8)"}`,
+                        }}>
+                        {done ? (
+                          <span style={{ color: "#22C55E" }}>✓</span>
+                        ) : active ? (
+                          <span className="w-3 h-3 rounded-full animate-ping block"
+                            style={{ background: step.color, animationDuration: "1s" }} />
+                        ) : (
+                          <span className="w-2 h-2 rounded-full block" style={{ background: "rgba(139,155,180,0.3)" }} />
+                        )}
+                      </div>
+                      {/* Step icon + label */}
+                      <span className="text-base flex-shrink-0">{step.icon}</span>
+                      <span className="text-sm font-medium"
+                        style={{ color: done ? "#22C55E" : active ? step.color : "#4B5A75" }}>
+                        {step.label}
+                        {active && <span className="inline-block ml-1 animate-pulse">...</span>}
+                      </span>
+                      {/* Done badge */}
+                      {done && (
+                        <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0"
+                          style={{ background: "rgba(34,197,94,0.15)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.3)" }}>
+                          Done
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="text-gray-600 text-xs mt-6">Usually 30–60 seconds · Do not close this tab</p>
             </div>
           )}
 
