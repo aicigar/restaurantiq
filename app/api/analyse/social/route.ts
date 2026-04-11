@@ -66,8 +66,23 @@ export async function POST(req: NextRequest) {
     return jsonResponse({ error: "Plan limit reached. Please upgrade.", code: "PLAN_LIMIT", used: usage.used, limit: usage.limit, plan: usage.plan }, 403);
   }
 
-  const { restaurant_name, city, concept, instagram_handle, tiktok_handle, competitor_handles, is_new_opening, seasonal_campaign } = await req.json();
+  const body = await req.json();
+  const { restaurant_name, city, concept, competitor_handles, is_new_opening, seasonal_campaign } = body;
   if (!restaurant_name || !city) return jsonResponse({ error: "restaurant_name and city are required", code: "VALIDATION_ERROR" }, 400);
+
+  // Strip URLs and @ symbols — accept "realchaska", "@realchaska", or "https://instagram.com/realchaska"
+  const extractHandle = (raw: string | undefined): string => {
+    if (!raw) return "";
+    const cleaned = raw.trim().replace(/^@/, "");
+    // Extract username from URL like https://www.instagram.com/realchaska/ or tiktok.com/@realchaska
+    const match = cleaned.match(/(?:instagram\.com|tiktok\.com)\/@?([A-Za-z0-9._]+)/i);
+    if (match) return match[1];
+    // Otherwise treat whole thing as the username (strip any remaining path/query)
+    return cleaned.split(/[/?#]/)[0];
+  };
+
+  const instagram_handle = extractHandle(body.instagram_handle);
+  const tiktok_handle = extractHandle(body.tiktok_handle);
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
