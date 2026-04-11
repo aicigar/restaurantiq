@@ -1,3 +1,5 @@
+import { buildSocialTextReport } from "@/lib/reports/social";
+
 export function buildTextReport(data: any, module: string): string {
   const lines: string[] = [];
   const divider = "═".repeat(60);
@@ -145,6 +147,8 @@ export function buildTextReport(data: any, module: string): string {
     lines.push("");
     lines.push("Delivery Landscape:");
     lines.push(data.delivery_landscape || "");
+  } else if (module === "social") {
+    return buildSocialTextReport(data);
   } else if (module === "advisor") {
     lines.push(`RESTAURANT:   ${data.restaurant_name}`);
     lines.push(`CITY:         ${data.city}`);

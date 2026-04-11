@@ -1,4 +1,5 @@
 import { jsPDF } from "jspdf";
+import { buildSocialPDFReport } from "@/lib/reports/social";
 
 export function buildPDFReport(data: any, module: string): jsPDF {
   const doc = new jsPDF({ unit: "pt", format: "letter" });
@@ -159,6 +160,9 @@ export function buildPDFReport(data: any, module: string): jsPDF {
   doc.text("AI-Powered Restaurant Intelligence Report", MARGIN + 46, 47);
 
   // Date + module badge
+  if (module === "social") {
+    return buildSocialPDFReport(data);
+  }
   const moduleLabel = module === "location" ? "Location Analysis" : module === "reviews" ? "Review Analysis" : module === "competitors" ? "Competitor Analysis" : "AI Improvement Advisor";
   const badgeColor = module === "location" ? C.orange : module === "reviews" ? C.teal : module === "competitors" ? C.coral : C.amber;
   doc.setFontSize(8);

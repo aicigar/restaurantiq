@@ -1,3 +1,5 @@
+import { buildSocialHTMLReport } from "@/lib/reports/social";
+
 export function buildHTMLReport(data: any, module: string): string {
   const scoreColor = (score: number, max = 100) => {
     const pct = (score / max) * 100;
@@ -245,6 +247,8 @@ export function buildHTMLReport(data: any, module: string): string {
         <p style="color:#CBD5E1;margin:0;font-size:14px;line-height:1.6;">${data.delivery_landscape}</p>
       </div>
     `;
+  } else if (module === "social") {
+    return buildSocialHTMLReport(data);
   } else if (module === "advisor") {
     const rankColor = (rank: number) =>
       rank === 1 ? "#FF4D6D" : rank === 2 ? "#FFB547" : "#00C9A7";

@@ -21,6 +21,11 @@ const config: Config = {
         purple: "#7C6FFF",
         amber: "#FFB547",
         green: "#22C55E",
+        magenta: "#E040FB",
+        magentaDim: "rgba(224,64,251,0.12)",
+        magentaBrd: "rgba(224,64,251,0.35)",
+        pink: "#FF4081",
+        pinkDim: "rgba(255,64,129,0.10)",
       },
       fontFamily: {
         sans: ["DM Sans", "sans-serif"],

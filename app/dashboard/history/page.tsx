@@ -6,6 +6,8 @@ const moduleConfig: Record<string, { icon: string; label: string; color: string 
   location: { icon: "📍", label: "Location", color: "text-orange" },
   reviews: { icon: "⭐", label: "Reviews", color: "text-teal" },
   competitors: { icon: "🔍", label: "Competitors", color: "text-coral" },
+  advisor: { icon: "🧠", label: "Advisor", color: "text-amber" },
+  social: { icon: "📱", label: "Social Intel", color: "text-magenta" },
 };
 
 const PLAN_LIMITS: Record<string, number | string> = {
@@ -197,7 +199,13 @@ export default async function HistoryPage() {
                         {report.verdict ? (
                           <span
                             className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                              report.verdict === "GO"
+                              report.module === "social"
+                                ? report.verdict === "A" || report.verdict === "B"
+                                  ? "bg-green/10 text-green"
+                                  : report.verdict === "C"
+                                  ? "bg-amber/10 text-amber"
+                                  : "bg-coral/10 text-coral"
+                                : report.verdict === "GO"
                                 ? "bg-green/10 text-green"
                                 : report.verdict === "NO-GO"
                                 ? "bg-coral/10 text-coral"

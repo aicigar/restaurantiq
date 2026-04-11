@@ -5,8 +5,9 @@ import LocationScorer from "@/components/modules/LocationScorer";
 import ReviewAnalyzer from "@/components/modules/ReviewAnalyzer";
 import CompetitorRadar from "@/components/modules/CompetitorRadar";
 import AdvisorModule from "@/components/modules/AdvisorModule";
+import SocialIntel from "@/components/modules/SocialIntel";
 
-type Module = "location" | "reviews" | "competitors" | "advisor";
+type Module = "location" | "reviews" | "competitors" | "advisor" | "social";
 
 export default function DashboardPage() {
   const [activeModule, setActiveModule] = useState<Module>("location");
@@ -19,6 +20,7 @@ export default function DashboardPage() {
         {activeModule === "reviews"     && <ReviewAnalyzer />}
         {activeModule === "competitors" && <CompetitorRadar />}
         {activeModule === "advisor"     && <AdvisorModule />}
+        {activeModule === "social"      && <SocialIntel />}
       </div>
     </div>
   );
