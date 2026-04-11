@@ -787,176 +787,142 @@ export function buildPDFReport(data: any, module: string): jsPDF {
   // ADVISOR MODULE
   // ════════════════════════════════════════════════════════════════
 
-    // Helpers — no emoji, only plain text (jsPDF doesn't support emoji)
+    // CRITICAL: always set font BEFORE splitTextToSize — jsPDF measures at current font
     const aRankColor = (rank: number): [number,number,number] =>
       rank === 1 ? C.coral : rank === 2 ? C.amber : C.teal;
-
-    const aCatColor = (cat: string): [number,number,number] => {
-      const m: Record<string, [number,number,number]> = {
-        reviews: C.teal, operations: C.amber, delivery: C.purple,
-        competitive: C.coral, marketing: [59, 130, 246],
-      };
-      return m[cat] || C.dimgray;
-    };
-
+    const aCatColor = (cat: string): [number,number,number] => ({
+      reviews: C.teal, operations: C.amber, delivery: C.purple,
+      competitive: C.coral, marketing: [59, 130, 246] as [number,number,number],
+    }[cat] || C.dimgray);
     const aEffortColor = (e: string): [number,number,number] =>
       e === "easy" ? C.green : e === "moderate" ? C.amber : C.coral;
 
-    // text widths — all relative to card inner area
-    const TW = INNER - 28;       // full-width text inside a card (12 left + 16 right pad)
-    const FIX_X = MARGIN + 44;   // fix text x-start (after "FIX:" label)
-    const FIX_W = INNER - 56;    // fix text width (accounts for label + pads)
+    // Layout constants — conservative widths to prevent overflow
+    const TX   = MARGIN + 14;        // text left x inside cards
+    const TW   = INNER - 28;         // text width inside cards (14px pad each side)
+    const FX   = MARGIN + 46;        // fix body text start x (after "FIX: " label)
+    const FW   = INNER - 60;         // fix body text width
+    const LH9  = 13;                 // line height for 9pt
+    const LH8  = 11;                 // line height for 8pt
+    const LH75 = 10;                 // line height for 7.5pt
 
     // ── Hero card ─────────────────────────────────────────────────
     const aScore = data.overall_health_score || 0;
     const aScoreCol: [number,number,number] = aScore >= 75 ? C.green : aScore >= 50 ? C.amber : C.coral;
-    const nameLines    = doc.splitTextToSize(data.restaurant_name || "", INNER - 110);
-    const summLines0   = doc.splitTextToSize(data.summary || "", INNER - 110);
-    const heroH = Math.max(90, nameLines.length * 14 + summLines0.slice(0,3).length * 10 + 40);
-    guard(heroH);
 
+    doc.setFontSize(13); doc.setFont("helvetica", "bold");
+    const nameLines = doc.splitTextToSize(data.restaurant_name || "", INNER - 110);
+    doc.setFontSize(7.5); doc.setFont("helvetica", "normal");
+    const summLines0 = doc.splitTextToSize(data.summary || "", INNER - 110);
+    const heroH = Math.max(96, 40 + nameLines.length * 15 + summLines0.slice(0,3).length * LH75 + 16);
+
+    guard(heroH);
     doc.setFillColor(...C.panel);
     doc.roundedRect(MARGIN, y, INNER, heroH, 6, 6, "F");
-    doc.setDrawColor(...C.amber);
-    doc.setLineWidth(0.5);
+    doc.setDrawColor(...C.amber); doc.setLineWidth(0.5);
     doc.roundedRect(MARGIN, y, INNER, heroH, 6, 6, "S");
 
     // Score circle
-    const aCx = MARGIN + 52, aCy = y + heroH / 2, aR = 28;
-    doc.setDrawColor(...C.border);
-    doc.setLineWidth(5);
-    doc.circle(aCx, aCy, aR, "S");
+    const aCx = MARGIN + 52, aCy = y + heroH / 2;
+    doc.setDrawColor(...C.border); doc.setLineWidth(5);
+    doc.circle(aCx, aCy, 28, "S");
     doc.setDrawColor(...aScoreCol);
-    doc.circle(aCx, aCy, aR, "S");
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
+    doc.circle(aCx, aCy, 28, "S");
+    doc.setFontSize(18); doc.setFont("helvetica", "bold");
     doc.setTextColor(...aScoreCol);
     doc.text(String(aScore), aCx, aCy + 6, { align: "center" });
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7); doc.setFont("helvetica", "normal");
     doc.setTextColor(...C.dimgray);
-    doc.text("/100", aCx, aCy + 16, { align: "center" });
+    doc.text("/100", aCx, aCy + 17, { align: "center" });
 
     const aTx = MARGIN + 96;
     let aTy = y + 16;
-    doc.setFontSize(7.5);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...C.amber);
-    doc.text("AI HEALTH SCORE", aTx, aTy);
-    aTy += 14;
-
-    doc.setFontSize(13);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...C.white);
-    doc.text(nameLines, aTx, aTy);
-    aTy += nameLines.length * 14 + 4;
-
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...C.dimgray);
-    doc.text(`${data.city || ""} · ${data.analysis_date || ""}`, aTx, aTy);
-    aTy += 12;
-
-    doc.setFontSize(7.5);
-    doc.setTextColor(...C.gray);
+    doc.setFontSize(7.5); doc.setFont("helvetica", "bold"); doc.setTextColor(...C.amber);
+    doc.text("AI HEALTH SCORE", aTx, aTy); aTy += 14;
+    doc.setFontSize(13); doc.setFont("helvetica", "bold"); doc.setTextColor(...C.white);
+    doc.text(nameLines, aTx, aTy); aTy += nameLines.length * 15 + 4;
+    doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(...C.dimgray);
+    doc.text(`${data.city || ""} · ${data.analysis_date || ""}`, aTx, aTy); aTy += 12;
+    doc.setFontSize(7.5); doc.setTextColor(...C.gray);
     doc.text(summLines0.slice(0, 3), aTx, aTy);
     y += heroH + 16;
 
     // ── Action Items ───────────────────────────────────────────────
-    guard(20);
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...C.white);
+    guard(22);
+    doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.setTextColor(...C.white);
     doc.text("Ranked Action Plan", MARGIN, y);
-    y += 14;
+    y += 15;
 
     for (const item of (data.action_items || [])) {
-      const problemLines = doc.splitTextToSize(item.problem || "", TW);
-      const evidLines    = doc.splitTextToSize(item.evidence || "", TW);
-      const fixLines     = doc.splitTextToSize(item.fix || "", FIX_W);
-      const impactLines  = doc.splitTextToSize(`Impact: ${item.estimated_impact || ""}`, TW);
+      // Measure each block with correct font set first
+      doc.setFontSize(9); doc.setFont("helvetica", "bold");
+      const pLines = doc.splitTextToSize(item.problem || "", TW);
 
-      // card height: badge row(28) + problem + evidence + fix + impact + timeframe + padding
-      const cardH = 36
-        + problemLines.length * 12
-        + 4 + evidLines.length * 11
-        + 6 + fixLines.length * 11
-        + 6 + impactLines.length * 11
-        + 14; // timeframe row + bottom pad
+      doc.setFontSize(8); doc.setFont("helvetica", "italic");
+      const eLines = doc.splitTextToSize(item.evidence || "", TW);
+
+      doc.setFontSize(8); doc.setFont("helvetica", "normal");
+      const fLines = doc.splitTextToSize(item.fix || "", FW);
+      const iLines = doc.splitTextToSize(`Impact: ${item.estimated_impact || ""}`, TW);
+
+      const cardH = 38                       // badge row
+        + pLines.length * LH9 + 5           // problem
+        + eLines.length * LH8 + 6           // evidence
+        + fLines.length * LH8 + 6           // fix
+        + iLines.length * LH8 + LH75 + 10; // impact + timeframe + bottom pad
 
       guard(cardH + 6);
+
+      // Card background + left stripe
       doc.setFillColor(...C.card);
       doc.roundedRect(MARGIN, y, INNER, cardH, 4, 4, "F");
-
-      // Left accent stripe colour = rank
       const aRc = aRankColor(item.rank);
       doc.setFillColor(...aRc);
       doc.rect(MARGIN, y, 4, cardH, "F");
 
-      // Rank badge
+      // Rank circle
       doc.setFillColor(...aRc);
       doc.circle(MARGIN + 20, y + 20, 11, "F");
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...C.white);
+      doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.setTextColor(...C.white);
       doc.text(String(item.rank), MARGIN + 20, y + 24, { align: "center" });
 
       // Category badge
       const aCc = aCatColor(item.category);
-      doc.setFillColor(aCc[0], aCc[1], aCc[2], 0.18);
-      doc.roundedRect(MARGIN + 36, y + 12, 62, 14, 3, 3, "F");
-      doc.setFontSize(7);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...aCc);
-      doc.text((item.category || "").toUpperCase(), MARGIN + 67, y + 21, { align: "center" });
+      doc.setFillColor(...C.border);
+      doc.roundedRect(MARGIN + 36, y + 12, 64, 14, 3, 3, "F");
+      doc.setFontSize(7); doc.setFont("helvetica", "bold"); doc.setTextColor(...aCc);
+      doc.text((item.category || "").toUpperCase(), MARGIN + 68, y + 21, { align: "center" });
 
-      // Effort badge (right side)
+      // Effort badge (right)
       const aEc = aEffortColor(item.effort);
-      doc.setFillColor(aEc[0], aEc[1], aEc[2], 0.18);
-      doc.roundedRect(MARGIN + INNER - 54, y + 12, 46, 14, 3, 3, "F");
-      doc.setFontSize(7);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...aEc);
-      doc.text((item.effort || "").toUpperCase(), MARGIN + INNER - 31, y + 21, { align: "center" });
+      doc.setFillColor(...C.border);
+      doc.roundedRect(MARGIN + INNER - 52, y + 12, 46, 14, 3, 3, "F");
+      doc.setFontSize(7); doc.setFont("helvetica", "bold"); doc.setTextColor(...aEc);
+      doc.text((item.effort || "").toUpperCase(), MARGIN + INNER - 29, y + 21, { align: "center" });
 
-      let iy = y + 36;
+      let iy = y + 38;
 
-      // Problem (bold white)
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...C.white);
-      doc.text(problemLines, MARGIN + 14, iy);
-      iy += problemLines.length * 12 + 4;
+      // Problem
+      doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.setTextColor(...C.white);
+      doc.text(pLines, TX, iy); iy += pLines.length * LH9 + 5;
 
-      // Evidence (italic dimgray)
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "italic");
-      doc.setTextColor(...C.dimgray);
-      doc.text(evidLines, MARGIN + 14, iy);
-      iy += evidLines.length * 11 + 6;
+      // Evidence
+      doc.setFontSize(8); doc.setFont("helvetica", "italic"); doc.setTextColor(...C.dimgray);
+      doc.text(eLines, TX, iy); iy += eLines.length * LH8 + 6;
 
-      // Fix label + text
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...C.teal);
-      doc.text("FIX:", MARGIN + 14, iy);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(...C.gray);
-      doc.text(fixLines, FIX_X, iy);
-      iy += fixLines.length * 11 + 6;
+      // Fix label + body
+      doc.setFontSize(8); doc.setFont("helvetica", "bold"); doc.setTextColor(...C.teal);
+      doc.text("FIX:", TX, iy);
+      doc.setFont("helvetica", "normal"); doc.setTextColor(...C.gray);
+      doc.text(fLines, FX, iy); iy += fLines.length * LH8 + 6;
 
-      // Impact (amber, wrapped)
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...C.amber);
-      doc.text(impactLines, MARGIN + 14, iy);
-      iy += impactLines.length * 11 + 4;
+      // Impact
+      doc.setFontSize(8); doc.setFont("helvetica", "bold"); doc.setTextColor(...C.amber);
+      doc.text(iLines, TX, iy); iy += iLines.length * LH8 + 4;
 
-      // Timeframe (dimgray, right-aligned)
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(...C.dimgray);
-      doc.setFontSize(7.5);
-      doc.text(item.timeframe || "", MARGIN + INNER - 14, iy, { align: "right" });
+      // Timeframe right-aligned
+      doc.setFontSize(7.5); doc.setFont("helvetica", "normal"); doc.setTextColor(...C.dimgray);
+      doc.text(item.timeframe || "", MARGIN + INNER - 12, iy, { align: "right" });
 
       y += cardH + 7;
     }
@@ -964,26 +930,27 @@ export function buildPDFReport(data: any, module: string): jsPDF {
     // ── Competitor Intelligence ────────────────────────────────────
     const ci = data.competitor_intelligence;
     if (ci) {
-      y += 4;
-      guard(20);
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...C.white);
-      doc.text("Competitor Intelligence", MARGIN, y);
-      y += 14;
+      y += 6; guard(22);
+      doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.setTextColor(...C.white);
+      doc.text("Competitor Intelligence", MARGIN, y); y += 15;
 
-      const trendLines  = doc.splitTextToSize(ci.their_recent_trend || "", TW - 80);
-      const weakLinesArr = (ci.their_top_weaknesses || []).map((w: string) =>
+      // Measure with correct fonts
+      doc.setFontSize(8); doc.setFont("helvetica", "normal");
+      const trendW = TW - 84;
+      const trendLines = doc.splitTextToSize(ci.their_recent_trend || "", trendW);
+      const weakArr: string[][] = (ci.their_top_weaknesses || []).map((w: string) =>
         doc.splitTextToSize(`- ${w}`, TW)
       );
-      const windowLines = doc.splitTextToSize(ci.your_window || "", TW - 16);
-      const wbH = windowLines.length * 11 + 24;
+      doc.setFontSize(8); doc.setFont("helvetica", "normal");
+      const windowLines = doc.splitTextToSize(ci.your_window || "", TW - 12);
+      const wbH = windowLines.length * LH8 + 26;
 
-      const ciH = 14            // competitor name
-        + 12 + trendLines.length * 11  // rating + trend
-        + 16                   // "weaknesses" label
-        + weakLinesArr.reduce((s: number, l: string[]) => s + l.length * 11 + 4, 0)
-        + 10 + wbH + 14;       // window box + padding
+      const ciH = 16                          // name
+        + 14                                  // rating row
+        + Math.max(LH8, trendLines.length * LH8) + 10  // trend
+        + 14                                  // weaknesses label
+        + weakArr.reduce((s: number, l: string[]) => s + l.length * LH8 + 4, 0)
+        + 10 + wbH + 12;                      // window box + pads
 
       guard(ciH + 4);
       doc.setFillColor(...C.card);
@@ -991,73 +958,53 @@ export function buildPDFReport(data: any, module: string): jsPDF {
       doc.setFillColor(...C.coral);
       doc.rect(MARGIN, y, 4, ciH, "F");
 
-      let cy2 = y + 14;
+      let cy2 = y + 16;
 
-      // Competitor name
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...C.white);
-      doc.text(ci.competitor_name || "", MARGIN + 14, cy2);
-      cy2 += 12;
+      // Name
+      doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(...C.white);
+      doc.text(ci.competitor_name || "", TX, cy2); cy2 += 14;
 
-      // Rating
-      doc.setFontSize(8.5);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...C.amber);
-      doc.text(`Rating: ${ci.their_rating}/5`, MARGIN + 14, cy2);
-      // Trend next to rating
-      doc.setFontSize(7.5);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(...C.dimgray);
-      doc.text(trendLines, MARGIN + 90, cy2);
-      cy2 += Math.max(12, trendLines.length * 11) + 10;
+      // Rating + trend on same row
+      doc.setFontSize(8.5); doc.setFont("helvetica", "bold"); doc.setTextColor(...C.amber);
+      doc.text(`Rating: ${ci.their_rating}/5`, TX, cy2);
+      doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(...C.dimgray);
+      doc.text(trendLines, TX + 84, cy2);
+      cy2 += Math.max(LH8, trendLines.length * LH8) + 10;
 
-      // Weaknesses label
-      doc.setFontSize(7.5);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...C.coral);
-      doc.text("THEIR WEAKNESSES", MARGIN + 14, cy2);
-      cy2 += 12;
-
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(...C.gray);
-      doc.setFontSize(8);
-      for (const wl of weakLinesArr) {
-        doc.text(wl, MARGIN + 14, cy2);
-        cy2 += wl.length * 11 + 4;
+      // Weaknesses
+      doc.setFontSize(7.5); doc.setFont("helvetica", "bold"); doc.setTextColor(...C.coral);
+      doc.text("THEIR WEAKNESSES", TX, cy2); cy2 += 13;
+      doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(...C.gray);
+      for (const wl of weakArr) {
+        doc.text(wl, TX, cy2);
+        cy2 += wl.length * LH8 + 4;
       }
 
-      cy2 += 6;
-      // Your window box
-      doc.setFillColor(0, 201, 167, 0.08);
-      doc.setDrawColor(0, 201, 167, 0.25);
-      doc.setLineWidth(0.5);
-      doc.roundedRect(MARGIN + 10, cy2, INNER - 20, wbH, 3, 3, "FD");
-      doc.setFontSize(7.5);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...C.teal);
-      doc.text("YOUR WINDOW RIGHT NOW", MARGIN + 18, cy2 + 11);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(...C.gray);
-      doc.setFontSize(8);
-      doc.text(windowLines, MARGIN + 18, cy2 + 22);
+      cy2 += 8;
+      // Window box — solid dark fill, teal border
+      doc.setFillColor(...C.panel);
+      doc.setDrawColor(...C.teal); doc.setLineWidth(0.6);
+      doc.roundedRect(TX - 2, cy2, INNER - 24, wbH, 3, 3, "FD");
+      doc.setFontSize(7.5); doc.setFont("helvetica", "bold"); doc.setTextColor(...C.teal);
+      doc.text("YOUR WINDOW RIGHT NOW", TX + 6, cy2 + 11);
+      doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(...C.gray);
+      doc.text(windowLines, TX + 6, cy2 + 22);
 
       y += ciH + 14;
     }
 
     // ── Delivery Gaps ─────────────────────────────────────────────
     if (data.delivery_gaps?.length) {
-      guard(20);
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...C.white);
-      doc.text("Delivery Coverage Gaps", MARGIN, y);
-      y += 14;
+      guard(22);
+      doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.setTextColor(...C.white);
+      doc.text("Delivery Coverage Gaps", MARGIN, y); y += 15;
 
       for (const gap of data.delivery_gaps) {
+        // Measure with correct font
+        doc.setFontSize(8); doc.setFont("helvetica", "normal");
         const noteLines = doc.splitTextToSize(gap.population_note || "", TW);
         const actLines  = doc.splitTextToSize(gap.action || "", TW);
-        const gh = 40 + noteLines.length * 11 + 6 + actLines.length * 11 + 10;
+        const gh = 42 + noteLines.length * LH8 + 6 + actLines.length * LH8 + 10;
         guard(gh + 4);
 
         doc.setFillColor(...C.card);
@@ -1065,118 +1012,96 @@ export function buildPDFReport(data: any, module: string): jsPDF {
         doc.setFillColor(...C.purple);
         doc.rect(MARGIN, y, 4, gh, "F");
 
-        // Zip code (left) + revenue (right) — on same line
-        doc.setFontSize(13);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(...C.white);
-        doc.text(String(gap.zip_code || ""), MARGIN + 14, y + 18);
+        // Zip (large, left) + revenue (right) on same baseline
+        doc.setFontSize(14); doc.setFont("helvetica", "bold"); doc.setTextColor(...C.white);
+        doc.text(String(gap.zip_code || ""), TX, y + 20);
+        doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.setTextColor(...C.green);
+        doc.text(gap.estimated_monthly_revenue || "", MARGIN + INNER - 12, y + 20, { align: "right" });
 
-        doc.setFontSize(9);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(...C.green);
-        doc.text(gap.estimated_monthly_revenue || "", MARGIN + INNER - 14, y + 18, { align: "right" });
+        doc.setFontSize(7.5); doc.setFont("helvetica", "normal"); doc.setTextColor(...C.dimgray);
+        doc.text(`${gap.distance_miles} mi away`, TX, y + 32);
 
-        doc.setFontSize(7.5);
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(...C.dimgray);
-        doc.text(`${gap.distance_miles} mi away`, MARGIN + 14, y + 30);
-
-        doc.setFontSize(8);
-        doc.setTextColor(...C.gray);
-        doc.text(noteLines, MARGIN + 14, y + 42);
-        const gny = y + 42 + noteLines.length * 11 + 6;
-
+        doc.setFontSize(8); doc.setTextColor(...C.gray);
+        doc.text(noteLines, TX, y + 44);
+        const gNy = y + 44 + noteLines.length * LH8 + 5;
         doc.setTextColor(...C.teal);
-        doc.text(actLines, MARGIN + 14, gny);
+        doc.text(actLines, TX, gNy);
+
         y += gh + 7;
       }
     }
 
     // ── Quick Wins ────────────────────────────────────────────────
     if (data.quick_wins?.length) {
-      y += 4;
-      guard(20);
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...C.white);
+      y += 6; guard(22);
+      doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.setTextColor(...C.white);
       doc.text("Quick Wins  —  Do Today", MARGIN, y);
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(...C.dimgray);
-      doc.text("Zero cost · Immediate impact", MARGIN + 160, y);
-      y += 14;
+      doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(...C.dimgray);
+      doc.text("Zero cost · Immediate impact", MARGIN + 162, y);
+      y += 15;
 
       for (const win of data.quick_wins) {
-        const winLines = doc.splitTextToSize(win, TW - 24);
-        const wh = winLines.length * 11 + 18;
+        doc.setFontSize(8.5); doc.setFont("helvetica", "normal");
+        const winLines = doc.splitTextToSize(win, TW - 26);
+        const wh = winLines.length * LH8 + 20;
         guard(wh + 4);
 
-        doc.setFillColor(34, 197, 94, 0.06);
+        // Solid card with green left border
+        doc.setFillColor(...C.card);
         doc.roundedRect(MARGIN, y, INNER, wh, 4, 4, "F");
-        doc.setDrawColor(34, 197, 94, 0.2);
-        doc.setLineWidth(0.5);
-        doc.roundedRect(MARGIN, y, INNER, wh, 4, 4, "S");
+        doc.setFillColor(...C.green);
+        doc.rect(MARGIN, y, 3, wh, "F");
 
-        // Checkbox square
-        doc.setDrawColor(34, 197, 94, 0.5);
-        doc.setLineWidth(1);
-        doc.rect(MARGIN + 12, y + wh / 2 - 6, 11, 11, "S");
+        // Checkbox
+        doc.setDrawColor(...C.green); doc.setLineWidth(0.8);
+        doc.rect(TX + 2, y + wh / 2 - 6, 11, 11, "S");
 
-        doc.setFontSize(8.5);
-        doc.setFont("helvetica", "normal");
         doc.setTextColor(...C.gray);
-        doc.text(winLines, MARGIN + 32, y + 12);
+        doc.text(winLines, TX + 22, y + 13);
         y += wh + 6;
       }
     }
 
     // ── Review Responses ──────────────────────────────────────────
     if (data.suggested_responses?.length) {
-      y += 4;
-      guard(20);
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...C.white);
+      y += 6; guard(22);
+      doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.setTextColor(...C.white);
       doc.text(`Review Responses  (${data.review_response_needed} unanswered)`, MARGIN, y);
-      y += 14;
+      y += 15;
 
       for (const sr of data.suggested_responses) {
-        const summLines = doc.splitTextToSize(`"${sr.review_summary}"`, TW);
-        const respLines = doc.splitTextToSize(sr.suggested_response || "", TW - 8);
-        const rh = 16 + summLines.length * 11
-          + 14 + respLines.length * 11 + 20;
-        guard(rh + 6);
+        // Measure with correct fonts first
+        doc.setFontSize(8); doc.setFont("helvetica", "italic");
+        const sLines = doc.splitTextToSize(`"${sr.review_summary}"`, TW);
+        doc.setFontSize(8); doc.setFont("helvetica", "normal");
+        const rLines = doc.splitTextToSize(sr.suggested_response || "", TW - 16);
 
+        const rh = 14                        // "REVIEWER SAID:" label
+          + sLines.length * LH8 + 12        // summary + gap
+          + 12                              // "YOUR RESPONSE:" label
+          + rLines.length * LH8 + 18;       // response box + pads
+
+        guard(rh + 6);
         doc.setFillColor(...C.card);
         doc.roundedRect(MARGIN, y, INNER, rh, 4, 4, "F");
 
         let ry2 = y + 13;
-        doc.setFontSize(7.5);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(...C.dimgray);
-        doc.text("REVIEWER SAID:", MARGIN + 14, ry2);
-        ry2 += 11;
 
-        doc.setFont("helvetica", "italic");
-        doc.setTextColor(...C.dimgray);
-        doc.setFontSize(8);
-        doc.text(summLines, MARGIN + 14, ry2);
-        ry2 += summLines.length * 11 + 10;
+        doc.setFontSize(7.5); doc.setFont("helvetica", "bold"); doc.setTextColor(...C.dimgray);
+        doc.text("REVIEWER SAID:", TX, ry2); ry2 += 11;
 
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(...C.gray);
-        doc.setFontSize(7.5);
-        doc.text("YOUR RESPONSE:", MARGIN + 14, ry2);
-        ry2 += 11;
+        doc.setFontSize(8); doc.setFont("helvetica", "italic"); doc.setTextColor(...C.dimgray);
+        doc.text(sLines, TX, ry2); ry2 += sLines.length * LH8 + 10;
 
-        // Response box
-        const rbH = respLines.length * 11 + 14;
-        doc.setFillColor(11, 17, 32, 0.5);
-        doc.roundedRect(MARGIN + 12, ry2 - 4, INNER - 24, rbH, 3, 3, "F");
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(...C.gray);
-        doc.setFontSize(8);
-        doc.text(respLines, MARGIN + 18, ry2 + 7);
+        doc.setFontSize(7.5); doc.setFont("helvetica", "bold"); doc.setTextColor(...C.gray);
+        doc.text("YOUR RESPONSE:", TX, ry2); ry2 += 12;
+
+        // Response box — solid dark panel
+        const rbH = rLines.length * LH8 + 14;
+        doc.setFillColor(...C.panel);
+        doc.roundedRect(TX - 2, ry2 - 4, INNER - 24, rbH, 3, 3, "F");
+        doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(...C.gray);
+        doc.text(rLines, TX + 6, ry2 + 8);
 
         y += rh + 8;
       }
