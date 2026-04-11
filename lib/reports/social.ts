@@ -368,7 +368,7 @@ export function buildSocialHTMLReport(data: SocialAnalysisResult): string {
           </tr>
         </thead>
         <tbody>
-          ${data.content_calendar.map((item, i) => {
+          ${data.content_calendar.map((item) => {
             const bgColor = item.platform === "Instagram" ? "rgba(224,64,251,0.05)" : item.platform === "TikTok" ? "rgba(255,64,129,0.05)" : "rgba(255,181,71,0.05)";
             const vpColor = item.viral_potential === "high" ? "#E040FB" : item.viral_potential === "medium" ? "#FFB547" : "#8B9BB4";
             return `<tr style="background:${bgColor};border-bottom:1px solid #1E2D4A;">
@@ -548,29 +548,6 @@ export function buildSocialPDFReport(data: SocialAnalysisResult): jsPDF {
     y += 26;
   };
 
-  const bodyText = (text: string, color: [number,number,number] = C.gray, size = 8.5) => {
-    if (!text) return;
-    guard(24);
-    doc.setFontSize(size);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...color);
-    const lines = doc.splitTextToSize(text, INNER);
-    doc.text(lines, MARGIN, y);
-    y += lines.length * (size + 3) + 4;
-  };
-
-  const labelValue = (label: string, value: string) => {
-    guard(18);
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...C.dimgray);
-    doc.text(label.toUpperCase(), MARGIN, y);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...C.gray);
-    const val = doc.splitTextToSize(value || "—", INNER - 120);
-    doc.text(val, MARGIN + 120, y);
-    y += Math.max(val.length * 11, 14);
-  };
 
   // Page 1 background + header
   drawPageBg();
@@ -661,77 +638,96 @@ export function buildSocialPDFReport(data: SocialAnalysisResult): jsPDF {
   const ig = data.own_presence?.instagram;
   const tt = data.own_presence?.tiktok;
 
-  if (ig) {
-    guard(80);
-    doc.setFillColor(...C.card);
-    doc.roundedRect(MARGIN, y, (INNER / 2) - 6, 72, 6, 6, "F");
-    doc.setFillColor(...C.magenta);
-    doc.rect(MARGIN, y, (INNER / 2) - 6, 3, "F");
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...C.magenta);
-    doc.text(`Instagram @${ig.handle}`, MARGIN + 8, y + 16);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...C.gray);
-    doc.text(`Followers: ${ig.followers}  |  Engagement: ${ig.estimated_engagement_rate}  |  ${ig.growth_trend}`, MARGIN + 8, y + 28);
-    const workingLines = doc.splitTextToSize(`Working: ${ig.what_is_working}`, (INNER / 2) - 24);
-    doc.setFontSize(7.5);
-    doc.setTextColor(...C.dimgray);
-    doc.text(workingLines.slice(0, 2), MARGIN + 8, y + 42);
-    const missingLines = doc.splitTextToSize(`Missing: ${ig.what_is_missing}`, (INNER / 2) - 24);
-    doc.setTextColor(...C.coral);
-    doc.text(missingLines.slice(0, 2), MARGIN + 8, y + 56);
-  }
+  const halfW = (INNER / 2) - 6;
+  const cardTextW = halfW - 16;
 
-  if (tt) {
-    const xR = MARGIN + (INNER / 2) + 6;
-    guard(80);
+  const drawPresenceCard = (
+    handle: string, platform: "Instagram" | "TikTok",
+    line2: string, working: string, missing: string,
+    xPos: number, color: [number,number,number]
+  ) => {
+    doc.setFontSize(7.5);
+    const wLines = doc.splitTextToSize(`Working: ${working}`, cardTextW);
+    const mLines = doc.splitTextToSize(`Missing: ${missing}`, cardTextW);
+    const cardH = 16 + 14 + 6 + wLines.length * 10 + 6 + mLines.length * 10 + 10;
+    guard(cardH + 4);
     doc.setFillColor(...C.card);
-    doc.roundedRect(xR, y, (INNER / 2) - 6, 72, 6, 6, "F");
-    doc.setFillColor(...C.pink);
-    doc.rect(xR, y, (INNER / 2) - 6, 3, "F");
+    doc.roundedRect(xPos, y, halfW, cardH, 6, 6, "F");
+    doc.setFillColor(...color);
+    doc.rect(xPos, y, halfW, 3, "F");
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(...C.pink);
-    doc.text(`TikTok @${tt.handle}`, xR + 8, y + 16);
+    doc.setTextColor(...color);
+    doc.text(`${platform}  @${handle}`, xPos + 8, y + 16);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...C.gray);
-    doc.text(`Followers: ${tt.followers}  |  Avg Views: ${tt.estimated_avg_views}  |  ${tt.growth_trend}`, xR + 8, y + 28);
-    const workingLines = doc.splitTextToSize(`Working: ${tt.what_is_working}`, (INNER / 2) - 24);
+    const statLines = doc.splitTextToSize(line2, cardTextW);
+    doc.text(statLines, xPos + 8, y + 28);
+    let cy = y + 28 + statLines.length * 11 + 6;
     doc.setFontSize(7.5);
     doc.setTextColor(...C.dimgray);
-    doc.text(workingLines.slice(0, 2), xR + 8, y + 42);
-    const missingLines = doc.splitTextToSize(`Missing: ${tt.what_is_missing}`, (INNER / 2) - 24);
+    doc.text(wLines, xPos + 8, cy);
+    cy += wLines.length * 10 + 6;
     doc.setTextColor(...C.coral);
-    doc.text(missingLines.slice(0, 2), xR + 8, y + 56);
+    doc.text(mLines, xPos + 8, cy);
+    return cardH;
+  };
+
+  let igH = 0, ttH = 0;
+  const rowY = y;
+  if (ig) {
+    igH = drawPresenceCard(
+      ig.handle, "Instagram",
+      `Followers: ${ig.followers}  |  Engagement: ${ig.estimated_engagement_rate}  |  ${ig.posting_frequency}  |  ${ig.growth_trend}`,
+      ig.what_is_working, ig.what_is_missing,
+      MARGIN, C.magenta
+    );
   }
-  y += 82;
+  y = rowY;
+  if (tt) {
+    ttH = drawPresenceCard(
+      tt.handle, "TikTok",
+      `Followers: ${tt.followers}  |  Avg Views: ${tt.estimated_avg_views}  |  ${tt.posting_frequency}  |  ${tt.growth_trend}`,
+      tt.what_is_working, tt.what_is_missing,
+      MARGIN + halfW + 12, C.pink
+    );
+  }
+  y = rowY + Math.max(igH, ttH) + 10;
 
   // Competitors
   if (data.competitor_analysis?.length) {
     sectionHeader("Competitor Analysis");
     data.competitor_analysis.forEach((c) => {
-      guard(70);
       const tc: [number,number,number] = c.threat_level === "high" ? C.coral : c.threat_level === "medium" ? C.amber : C.green;
+      doc.setFontSize(7.5);
+      const statLine = doc.splitTextToSize(
+        `IG: ${c.instagram_followers}  |  TT: ${c.tiktok_followers}  |  Reach: ${c.estimated_monthly_reach || "unknown"}/mo  |  Threat: ${(c.threat_level || "").toUpperCase()}`,
+        INNER - 24
+      );
+      const insightLines = doc.splitTextToSize(c.key_strategic_insight || "", INNER - 24);
+      const oppLines = doc.splitTextToSize(`Opportunity: ${c.opportunity_to_steal_audience || ""}`, INNER - 24);
+      const cardH = 18 + statLine.length * 10 + insightLines.length * 10 + oppLines.length * 10 + 20;
+      guard(cardH + 6);
       doc.setFillColor(...C.card);
-      doc.roundedRect(MARGIN, y, INNER, 60, 6, 6, "F");
+      doc.roundedRect(MARGIN, y, INNER, cardH, 6, 6, "F");
       doc.setFillColor(...tc);
-      doc.rect(MARGIN, y, 3, 60, "F");
+      doc.rect(MARGIN, y, 3, cardH, "F");
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...C.white);
-      doc.text(c.name, MARGIN + 12, y + 14);
+      doc.text(c.name || "Competitor", MARGIN + 12, y + 14);
       doc.setFontSize(7.5);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(...C.dimgray);
-      doc.text(`IG: ${c.instagram_followers}  |  TT: ${c.tiktok_followers}  |  Reach: ${c.estimated_monthly_reach}/mo  |  Threat: ${c.threat_level.toUpperCase()}`, MARGIN + 12, y + 26);
-      const insightLines = doc.splitTextToSize(c.key_strategic_insight, INNER - 24);
+      let cy = y + 26;
+      doc.text(statLine, MARGIN + 12, cy);
+      cy += statLine.length * 10 + 6;
       doc.setTextColor(...C.gray);
-      doc.text(insightLines.slice(0, 2), MARGIN + 12, y + 38);
-      const oppLines = doc.splitTextToSize(`Opportunity: ${c.opportunity_to_steal_audience}`, INNER - 24);
+      doc.text(insightLines, MARGIN + 12, cy);
+      cy += insightLines.length * 10 + 6;
       doc.setTextColor(...C.teal);
-      doc.text(oppLines.slice(0, 1), MARGIN + 12, y + 52);
-      y += 68;
+      doc.text(oppLines, MARGIN + 12, cy);
+      y += cardH + 8;
     });
   }
 
@@ -740,29 +736,37 @@ export function buildSocialPDFReport(data: SocialAnalysisResult): jsPDF {
     newPage();
     sectionHeader("Your Biggest Viral Opportunity");
     const vo = data.viral_opportunity;
-    guard(100);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    const headLines = doc.splitTextToSize(vo.headline || "", INNER - 20);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    const descLines = doc.splitTextToSize(vo.opportunity_description || "", INNER - 20);
+    const whyLines = doc.splitTextToSize(vo.why_right_now || "", INNER - 20);
+    const cardH = headLines.length * 14 + descLines.length * 11 + whyLines.length * 11 + 50;
+    guard(cardH);
     doc.setFillColor(...C.panel);
-    doc.roundedRect(MARGIN, y, INNER, 90, 6, 6, "F");
+    doc.roundedRect(MARGIN, y, INNER, cardH, 6, 6, "F");
     doc.setFillColor(...C.magenta);
-    doc.rect(MARGIN, y, 4, 90, "F");
+    doc.rect(MARGIN, y, 4, cardH, "F");
+    let cy = y + 16;
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...C.magenta);
-    const headLines = doc.splitTextToSize(vo.headline, INNER - 20);
-    doc.text(headLines, MARGIN + 12, y + 16);
+    doc.text(headLines, MARGIN + 12, cy);
+    cy += headLines.length * 14 + 6;
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...C.gray);
-    const descLines = doc.splitTextToSize(vo.opportunity_description, INNER - 20);
-    doc.text(descLines.slice(0, 3), MARGIN + 12, y + 34);
+    doc.text(descLines, MARGIN + 12, cy);
+    cy += descLines.length * 11 + 8;
     doc.setTextColor(...C.teal);
-    const whyLines = doc.splitTextToSize(vo.why_right_now, INNER - 20);
-    doc.text(whyLines.slice(0, 2), MARGIN + 12, y + 62);
+    doc.text(whyLines, MARGIN + 12, cy);
+    cy += whyLines.length * 11 + 8;
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...C.green);
-    doc.text(`Est. Reach: ${vo.estimated_reach_if_executed}`, MARGIN + 12, y + 80);
-    y += 98;
-    y += 8;
+    doc.text(`Est. Reach: ${vo.estimated_reach_if_executed}`, MARGIN + 12, cy);
+    y += cardH + 10;
     vo.exact_steps?.forEach((step, i) => {
       guard(22);
       doc.setFillColor(...C.magenta);
@@ -798,22 +802,37 @@ export function buildSocialPDFReport(data: SocialAnalysisResult): jsPDF {
     });
     y += 18;
     data.content_calendar.forEach((item) => {
-      guard(18);
       const vpColor: [number,number,number] = item.viral_potential === "high" ? C.magenta : item.viral_potential === "medium" ? C.amber : C.dimgray;
-      const row = [String(item.week), item.day, item.platform, item.content_type, item.hook, item.viral_potential];
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      // Pre-calculate wrapped hook to determine row height
+      const hookLines = doc.splitTextToSize(item.hook || "", colW[4] - 6);
+      const rowH = Math.max(hookLines.length * 10 + 8, 16);
+      guard(rowH + 2);
+      const rowBg: [number,number,number] = item.platform === "Instagram" ? [22,15,35] : item.platform === "TikTok" ? [25,12,22] : [22,22,15];
+      doc.setFillColor(...rowBg);
+      doc.rect(MARGIN, y, INNER, rowH, "F");
       cx = MARGIN + 4;
-      doc.setFillColor(...C.card);
-      doc.rect(MARGIN, y, INNER, 14, "F");
-      row.forEach((cell, i) => {
-        const maxW = colW[i] - 6;
-        doc.setFontSize(7);
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(i === 5 ? vpColor[0] : C.gray[0], i === 5 ? vpColor[1] : C.gray[1], i === 5 ? vpColor[2] : C.gray[2]);
-        const truncated = doc.splitTextToSize(cell || "", maxW)[0] || "";
-        doc.text(truncated, cx, y + 10);
+      const cells: { text: string; color: [number,number,number]; wrap: boolean }[] = [
+        { text: String(item.week),            color: C.gray,    wrap: false },
+        { text: item.day || "",               color: C.gray,    wrap: false },
+        { text: item.platform || "",          color: item.platform === "Instagram" ? C.magenta : C.pink, wrap: false },
+        { text: item.content_type || "",      color: C.dimgray, wrap: false },
+        { text: item.hook || "",              color: C.gray,    wrap: true  },
+        { text: item.viral_potential || "",   color: vpColor,   wrap: false },
+      ];
+      cells.forEach((cell, i) => {
+        doc.setTextColor(...cell.color);
+        if (cell.wrap) {
+          const wl = doc.splitTextToSize(cell.text, colW[i] - 6);
+          doc.text(wl, cx, y + 9);
+        } else {
+          const t = doc.splitTextToSize(cell.text, colW[i] - 6)[0] || "";
+          doc.text(t, cx, y + 9);
+        }
         cx += colW[i];
       });
-      y += 16;
+      y += rowH + 2;
     });
     y += 10;
   }
@@ -822,25 +841,39 @@ export function buildSocialPDFReport(data: SocialAnalysisResult): jsPDF {
   if (data.quick_wins?.length) {
     sectionHeader("Quick Wins");
     data.quick_wins.forEach((w) => {
-      guard(50);
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "bold");
+      const aLines = doc.splitTextToSize(w.action || "", INNER - 130);
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "normal");
+      const impactLines = doc.splitTextToSize(w.estimated_impact || "", INNER - 24);
+      const cardH = aLines.length * 12 + impactLines.length * 10 + 22;
+      guard(cardH + 6);
       doc.setFillColor(...C.card);
-      doc.roundedRect(MARGIN, y, INNER, 42, 4, 4, "F");
+      doc.roundedRect(MARGIN, y, INNER, cardH, 4, 4, "F");
+      if (w.do_today) {
+        doc.setFillColor(...C.magenta);
+        doc.rect(MARGIN, y, INNER, 3, "F");
+      }
       doc.setFontSize(8.5);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...C.white);
-      const aLines = doc.splitTextToSize(w.action, INNER - 130);
       doc.text(aLines, MARGIN + 8, y + 14);
+      if (w.do_today) {
+        doc.setFontSize(7);
+        doc.setTextColor(...C.magenta);
+        doc.text("DO TODAY", W - MARGIN - 6, y + 14, { align: "right" });
+        if (w.zero_cost) {
+          doc.setTextColor(...C.green);
+          doc.text("ZERO COST", W - MARGIN - 6, y + 24, { align: "right" });
+        }
+      }
+      const impactY = y + aLines.length * 12 + 14;
       doc.setFontSize(7.5);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(...C.green);
-      doc.text(w.estimated_impact, MARGIN + 8, y + 32);
-      if (w.do_today) {
-        doc.setFontSize(7);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(...C.magenta);
-        doc.text("DO TODAY", W - MARGIN - 6, y + 14, { align: "right" });
-      }
-      y += 48;
+      doc.text(impactLines, MARGIN + 8, impactY);
+      y += cardH + 6;
     });
   }
 
