@@ -38,20 +38,37 @@ export default function AdvisorModule() {
   const handleRun = async () => {
     if (!restaurantName.trim() || !city.trim()) return;
     setLoading(true); setStatus("loading"); setError(null); setResult(null);
-    const res = await fetch("/api/analyse/advisor", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        restaurant_name: restaurantName,
-        city,
-        competitor_name: competitor || undefined,
-        zip_codes: zipCodes || undefined,
-      }),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) { setError(data); setStatus("error"); }
-    else { setResult(data); setStatus("done"); }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 95000); // 95s client timeout
+
+    try {
+      const res = await fetch("/api/analyse/advisor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          restaurant_name: restaurantName,
+          city,
+          competitor_name: competitor || undefined,
+          zip_codes: zipCodes || undefined,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const data = await res.json();
+      setLoading(false);
+      if (!res.ok) { setError(data); setStatus("error"); }
+      else { setResult(data); setStatus("done"); }
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      setLoading(false);
+      if (err.name === "AbortError") {
+        setError({ error: "Analysis timed out after 90 seconds. Try again — results vary by restaurant name recognition.", code: "TIMEOUT" });
+      } else {
+        setError({ error: err.message || "Network error", code: "API_ERROR" });
+      }
+      setStatus("error");
+    }
   };
 
   const toggleExpand = (rank: number) => {
@@ -163,9 +180,9 @@ export default function AdvisorModule() {
             <div className="flex flex-col items-center justify-center h-full text-center">
               <div className="w-16 h-16 rounded-full mb-6 animate-spin" style={{ border: "3px solid rgba(30,45,74,0.8)", borderTopColor: "#FFB547" }} />
               <h3 className="text-white text-lg font-bold mb-2">Running deep analysis...</h3>
-              <p className="text-gray-500 text-sm mb-6">Searching reviews, benchmarking competitors, checking delivery gaps. Takes 60–90 seconds.</p>
+              <p className="text-gray-500 text-sm mb-6">Running 3 live searches then generating your action plan. Usually 30–60 seconds.</p>
               <div className="space-y-2 text-left max-w-xs w-full">
-                {["Scanning Google, Yelp, DoorDash, Uber Eats...", "Benchmarking competitor ratings...", "Checking delivery coverage gaps...", "Generating ranked action plan..."].map((step, i) => (
+                {["Searching reviews on Google, Yelp, DoorDash...", "Benchmarking competitor ratings...", "Checking delivery gaps...", "Writing ranked action plan..."].map((step, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs text-gray-500">
                     <span className="w-4 h-4 rounded-full animate-pulse flex-shrink-0" style={{ background: "rgba(255,181,71,0.3)" }} />
                     {step}

@@ -24,78 +24,69 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "restaurant_name and city are required", code: "VALIDATION_ERROR" }, { status: 400 });
     }
 
-    const competitorLine = competitor_name ? `Their main competitor is: ${competitor_name}` : "";
-    const zipLine = zip_codes ? `Nearby zip codes to check for delivery gaps: ${zip_codes}` : "";
+    const systemPrompt = `You are RestaurantIQ's AI Improvement Advisor. Generate hyper-specific ranked action items with real revenue estimates. Do a MAXIMUM of 3 web searches total, then write the JSON immediately. Return ONLY valid JSON — no markdown, no text outside the JSON.`;
 
-    const systemPrompt = `You are RestaurantIQ's AI Improvement Advisor. You analyse a restaurant's reviews, competitor performance, and delivery data to generate hyper-specific, ranked action items with real revenue impact estimates. Always use web search to find actual current data. Every recommendation must reference specific numbers, named competitors, real zip codes, or actual review quotes (paraphrased). Never give generic advice. Return ONLY valid JSON with no markdown or text outside the JSON object.`;
+    const competitorPart = competitor_name ? `Competitor to benchmark: "${competitor_name}".` : "";
+    const zipPart = zip_codes ? `Check delivery gaps in zip codes: ${zip_codes}.` : "";
 
-    const userPrompt = `You are analysing '${restaurant_name}' in '${city}'.
-${competitorLine}
-${zipLine}
+    const userPrompt = `Analyse "${restaurant_name}" in "${city}". ${competitorPart} ${zipPart}
 
-Use web search to:
-1. Find recent reviews for '${restaurant_name}' on Google, Yelp, DoorDash, Uber Eats — note specific complaints and patterns
-2. Find the rating and recent reviews for their competitor '${competitor_name || "nearest similar restaurant"}' — identify where the competitor is weaker
-3. Check what food delivery options exist in the nearby zip codes provided
-4. Identify any delivery radius gaps or underserved zones
+Do exactly 3 web searches:
+1. Search for reviews of "${restaurant_name}" in "${city}"
+2. Search for ratings/reviews of "${competitor_name || "top nearby competitor"}" in "${city}"
+3. Search for food delivery options near "${city}" ${zip_codes ? `zip codes ${zip_codes}` : ""}
 
-Return ONLY this exact JSON (no markdown, no text outside the JSON):
+Then immediately return this JSON (no extra searches after these 3):
 
 {
-  "restaurant_name": "string",
-  "city": "string",
-  "overall_health_score": 0,
-  "analysis_date": "string (today's date YYYY-MM-DD)",
-  "data_sources": ["strings listing what was searched and found"],
+  "restaurant_name": "${restaurant_name}",
+  "city": "${city}",
+  "overall_health_score": <integer 0-100>,
+  "analysis_date": "<YYYY-MM-DD>",
+  "data_sources": ["<what you searched>", "<what you found>"],
+  "summary": "<2-3 sentences: overall assessment and top priority>",
   "action_items": [
     {
       "rank": 1,
-      "category": "reviews",
-      "problem": "string (specific problem with real data — mention actual star counts, frequencies, specific complaints found in reviews)",
-      "evidence": "string (what the data shows — e.g. '3 of last 12 one-star reviews mention cold fries on delivery')",
-      "fix": "string (specific operational action — not vague, mention exact changes like hours, packaging type, platform settings)",
-      "estimated_impact": "string (dollar amount per week or rating improvement — e.g. '+$800-1,200/week in retained orders' or '+0.3 stars over 60 days')",
-      "effort": "easy",
-      "timeframe": "string (e.g. 'Implement this week' or 'Within 30 days')",
-      "priority_reason": "string (why this ranks where it does)"
+      "category": "<reviews|operations|delivery|competitive|marketing>",
+      "problem": "<specific problem with real numbers e.g. '4 of last 10 reviews mention slow delivery'>",
+      "evidence": "<exact data found e.g. '3.8 stars on Google, 12 one-star reviews mention cold food'>",
+      "fix": "<specific action e.g. 'Switch to insulated packaging for delivery orders over 2 miles'>",
+      "estimated_impact": "<e.g. '+$600-900/week' or '+0.3 stars in 60 days'>",
+      "effort": "<easy|moderate|hard>",
+      "timeframe": "<e.g. 'This week' or 'Within 30 days'>",
+      "priority_reason": "<why this is rank 1>"
     }
   ],
   "competitor_intelligence": {
-    "competitor_name": "string",
-    "their_rating": 0.0,
-    "their_recent_trend": "string (rising / falling / stable with evidence)",
-    "their_top_weaknesses": ["strings — specific complaints from their reviews"],
-    "your_window": "string (specific opportunity to exploit their weakness right now)"
+    "competitor_name": "<name>",
+    "their_rating": <float>,
+    "their_recent_trend": "<rising|falling|stable — with one line of evidence>",
+    "their_top_weaknesses": ["<weakness 1>", "<weakness 2>", "<weakness 3>"],
+    "your_window": "<specific action to exploit their weakness now>"
   },
   "delivery_gaps": [
     {
-      "zip_code": "string",
-      "distance_miles": 0.0,
-      "population_note": "string (brief demographic note)",
-      "estimated_monthly_revenue": "string (e.g. '$1,500-2,500/month')",
-      "action": "string (e.g. 'Expand DoorDash delivery radius to include this zip — costs $0')"
+      "zip_code": "<zip>",
+      "distance_miles": <float>,
+      "population_note": "<brief demographic note>",
+      "estimated_monthly_revenue": "<e.g. '$1,500-2,500/month'>",
+      "action": "<e.g. 'Expand DoorDash radius to this zip — $0 cost'>"
     }
   ],
-  "quick_wins": ["strings — 3 things the owner can do TODAY with zero cost that will improve their score"],
-  "review_response_needed": 0,
+  "quick_wins": ["<do today #1>", "<do today #2>", "<do today #3>"],
+  "review_response_needed": <integer>,
   "suggested_responses": [
     {
-      "review_summary": "string (what the negative review said, paraphrased)",
-      "suggested_response": "string (professional response the owner can copy-paste)"
+      "review_summary": "<paraphrase of negative review>",
+      "suggested_response": "<professional owner reply — 2-3 sentences>"
     }
-  ],
-  "summary": "string (2-3 sentence overall assessment of the restaurant's health and top priority)"
+  ]
 }
 
-QUALITY STANDARD — every action item must be this specific:
-- BAD: "Improve your service quality"
-- GOOD: "Your Friday evening wait time reviews are 2.1x worse than your top competitor. Consider adding a second cashier from 6-9 PM or enabling pre-ordering. Estimated impact: +$800-1,200/week in retained orders."
-- BAD: "Respond to your negative reviews"
-- GOOD: "3 of your last 12 one-star reviews mention cold fries on delivery. Switch to vented delivery packaging for fries. Estimated delivery rating improvement: +0.3 stars over 60 days."
+Generate 4-5 action_items. Be specific with numbers from your searches. If you cannot find real data for a field, make a realistic estimate based on industry averages for similar restaurants.`;
 
-Generate at least 5 action items. Be hyper-specific with real data from your search.`;
-
-    const rawText = await callClaudeWithSearch(userPrompt, systemPrompt, 6);
+    const rawText = await callClaudeWithSearch(userPrompt, systemPrompt, 90000);
 
     let result: any;
     try {
@@ -104,7 +95,7 @@ Generate at least 5 action items. Be hyper-specific with real data from your sea
       if (start === -1 || end === -1) throw new Error("No JSON found");
       result = JSON.parse(rawText.slice(start, end + 1));
     } catch {
-      return NextResponse.json({ error: "Failed to parse AI response", code: "PARSE_ERROR" }, { status: 422 });
+      return NextResponse.json({ error: "Failed to parse AI response. Please try again.", code: "PARSE_ERROR" }, { status: 422 });
     }
 
     const { data: report, error: reportError } = await supabase
@@ -131,6 +122,10 @@ Generate at least 5 action items. Be hyper-specific with real data from your sea
     return NextResponse.json({ ...result, reportId: report?.id });
   } catch (err: any) {
     console.error("Advisor analysis error:", err);
-    return NextResponse.json({ error: err.message || "Internal server error", code: "API_ERROR" }, { status: 500 });
+    const isTimeout = err.message?.includes("timeout") || err.code === "ETIMEDOUT";
+    return NextResponse.json(
+      { error: isTimeout ? "Analysis timed out. Try with fewer details or a more well-known restaurant." : (err.message || "Internal server error"), code: isTimeout ? "TIMEOUT" : "API_ERROR" },
+      { status: 500 }
+    );
   }
 }
