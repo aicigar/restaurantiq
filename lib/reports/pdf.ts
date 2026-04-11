@@ -159,8 +159,8 @@ export function buildPDFReport(data: any, module: string): jsPDF {
   doc.text("AI-Powered Restaurant Intelligence Report", MARGIN + 46, 47);
 
   // Date + module badge
-  const moduleLabel = module === "location" ? "Location Analysis" : module === "reviews" ? "Review Analysis" : "Competitor Analysis";
-  const badgeColor = module === "location" ? C.orange : module === "reviews" ? C.teal : C.coral;
+  const moduleLabel = module === "location" ? "Location Analysis" : module === "reviews" ? "Review Analysis" : module === "competitors" ? "Competitor Analysis" : "AI Improvement Advisor";
+  const badgeColor = module === "location" ? C.orange : module === "reviews" ? C.teal : module === "competitors" ? C.coral : C.amber;
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...badgeColor);
@@ -781,6 +781,333 @@ export function buildPDFReport(data: any, module: string): jsPDF {
       doc.setTextColor(...C.gray);
       doc.text(delLines, MARGIN + 12, y + 14);
       y += delH + 10;
+    }
+  } else if (module === "advisor") {
+  // ════════════════════════════════════════════════════════════════
+  // ADVISOR MODULE
+  // ════════════════════════════════════════════════════════════════
+
+    const rankColor = (rank: number): [number,number,number] =>
+      rank === 1 ? C.coral : rank === 2 ? C.amber : C.teal;
+
+    const catColor = (cat: string): [number,number,number] => {
+      const m: Record<string, [number,number,number]> = {
+        reviews: C.teal, operations: C.amber, delivery: C.purple,
+        competitive: C.coral, marketing: [59, 130, 246],
+      };
+      return m[cat] || C.dimgray;
+    };
+
+    const effortColor = (e: string): [number,number,number] =>
+      e === "easy" ? C.green : e === "moderate" ? C.amber : C.coral;
+
+    // ── Hero: score + summary ──────────────────────────────────────
+    const heroH = 90;
+    guard(heroH);
+    doc.setFillColor(...C.panel);
+    doc.roundedRect(MARGIN, y, INNER, heroH, 6, 6, "F");
+    doc.setDrawColor(...C.amber);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(MARGIN, y, INNER, heroH, 6, 6, "S");
+
+    // Score ring (simple circle)
+    const cx = MARGIN + 52, cy = y + 45, r = 28;
+    const score = data.overall_health_score || 0;
+    const scoreCol: [number,number,number] = score >= 75 ? C.green : score >= 50 ? C.amber : C.coral;
+    doc.setDrawColor(...C.border);
+    doc.setLineWidth(5);
+    doc.circle(cx, cy, r, "S");
+    doc.setDrawColor(...scoreCol);
+    doc.circle(cx, cy, r, "S");
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...scoreCol);
+    doc.text(String(score), cx, cy + 6, { align: "center" });
+
+    const tx = MARGIN + 98;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...C.amber);
+    doc.text("AI HEALTH SCORE", tx, y + 18);
+    doc.setFontSize(14);
+    doc.setTextColor(...C.white);
+    doc.text(data.restaurant_name || "", tx, y + 34);
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...C.dimgray);
+    doc.text(`${data.city || ""} · ${data.analysis_date || ""}`, tx, y + 47);
+
+    const summaryLines = doc.splitTextToSize(data.summary || "", INNER - 115);
+    doc.setFontSize(8);
+    doc.setTextColor(...C.gray);
+    doc.text(summaryLines.slice(0, 3), tx, y + 60);
+    y += heroH + 14;
+
+    // ── Action Items ───────────────────────────────────────────────
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...C.white);
+    guard(20);
+    doc.text("Ranked Action Plan", MARGIN, y);
+    y += 14;
+
+    for (const item of (data.action_items || [])) {
+      const problemLines = doc.splitTextToSize(item.problem || "", INNER - 60);
+      const evidLines    = doc.splitTextToSize(item.evidence || "", INNER - 60);
+      const fixLines     = doc.splitTextToSize(item.fix || "", INNER - 60);
+      const cardH = 20 + problemLines.length * 12 + evidLines.length * 11 + fixLines.length * 11 + 24;
+      guard(cardH + 4);
+
+      doc.setFillColor(...C.card);
+      doc.roundedRect(MARGIN, y, INNER, cardH, 4, 4, "F");
+
+      // Rank badge
+      const rc = rankColor(item.rank);
+      doc.setFillColor(...rc);
+      doc.circle(MARGIN + 18, y + 18, 11, "F");
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.white);
+      doc.text(String(item.rank), MARGIN + 18, y + 22, { align: "center" });
+
+      // Category badge
+      const cc = catColor(item.category);
+      doc.setFillColor(cc[0], cc[1], cc[2], 0.15);
+      doc.roundedRect(MARGIN + 34, y + 10, 58, 14, 3, 3, "F");
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...cc);
+      doc.text((item.category || "").toUpperCase(), MARGIN + 63, y + 19, { align: "center" });
+
+      // Effort badge
+      const ec = effortColor(item.effort);
+      doc.setFillColor(ec[0], ec[1], ec[2], 0.15);
+      doc.roundedRect(MARGIN + INNER - 58, y + 10, 46, 14, 3, 3, "F");
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...ec);
+      doc.text((item.effort || "").toUpperCase(), MARGIN + INNER - 35, y + 19, { align: "center" });
+
+      let iy = y + 32;
+
+      // Problem
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.white);
+      doc.text(problemLines, MARGIN + 12, iy);
+      iy += problemLines.length * 12;
+
+      // Evidence
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "italic");
+      doc.setTextColor(...C.dimgray);
+      doc.text(evidLines, MARGIN + 12, iy + 2);
+      iy += evidLines.length * 11 + 4;
+
+      // Fix
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.teal);
+      doc.text("FIX →", MARGIN + 12, iy + 2);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...C.gray);
+      doc.text(fixLines, MARGIN + 44, iy + 2);
+      iy += fixLines.length * 11 + 4;
+
+      // Impact + timeframe
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.amber);
+      doc.text(`💰 ${item.estimated_impact || ""}`, MARGIN + 12, iy + 2);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...C.dimgray);
+      doc.text(item.timeframe || "", MARGIN + 12 + 120, iy + 2);
+
+      y += cardH + 6;
+    }
+
+    // ── Competitor Intelligence ────────────────────────────────────
+    const ci = data.competitor_intelligence;
+    if (ci) {
+      guard(20);
+      y += 6;
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.white);
+      doc.text("Competitor Intelligence", MARGIN, y);
+      y += 14;
+
+      const weakLines = (ci.their_top_weaknesses || []).map((w: string) =>
+        doc.splitTextToSize(`→ ${w}`, INNER - 28)
+      );
+      const windowLines = doc.splitTextToSize(ci.your_window || "", INNER - 28);
+      const ciH = 20 + weakLines.reduce((s: number, l: string[]) => s + l.length * 11, 0) + windowLines.length * 11 + 36;
+      guard(ciH);
+
+      doc.setFillColor(...C.card);
+      doc.roundedRect(MARGIN, y, INNER, ciH, 4, 4, "F");
+      doc.setFillColor(...C.coral);
+      doc.rect(MARGIN, y, 4, ciH, "F");
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.white);
+      doc.text(ci.competitor_name || "", MARGIN + 16, y + 16);
+      doc.setFontSize(8.5);
+      doc.setTextColor(...C.amber);
+      doc.text(`⭐ ${ci.their_rating}/5`, MARGIN + 16, y + 28);
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...C.dimgray);
+      doc.text(ci.their_recent_trend || "", MARGIN + 70, y + 28);
+
+      let wy = y + 40;
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.coral);
+      doc.text("THEIR WEAKNESSES", MARGIN + 16, wy);
+      wy += 12;
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...C.gray);
+      for (const wl of weakLines) {
+        doc.text(wl, MARGIN + 16, wy);
+        wy += wl.length * 11;
+      }
+
+      // Your window box
+      wy += 4;
+      const wbH = windowLines.length * 11 + 18;
+      doc.setFillColor(0, 201, 167, 0.08);
+      doc.roundedRect(MARGIN + 12, wy, INNER - 24, wbH, 3, 3, "F");
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.teal);
+      doc.text("YOUR WINDOW RIGHT NOW", MARGIN + 20, wy + 11);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...C.gray);
+      doc.text(windowLines, MARGIN + 20, wy + 22);
+      y += ciH + 10;
+    }
+
+    // ── Delivery Gaps ─────────────────────────────────────────────
+    if (data.delivery_gaps?.length) {
+      guard(20);
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.white);
+      doc.text("Delivery Coverage Gaps", MARGIN, y);
+      y += 14;
+
+      for (const gap of data.delivery_gaps) {
+        const noteLines = doc.splitTextToSize(gap.population_note || "", INNER - 60);
+        const actLines  = doc.splitTextToSize(gap.action || "", INNER - 60);
+        const gh = noteLines.length * 11 + actLines.length * 11 + 36;
+        guard(gh + 4);
+
+        doc.setFillColor(...C.card);
+        doc.roundedRect(MARGIN, y, INNER, gh, 4, 4, "F");
+        doc.setFillColor(...C.purple);
+        doc.rect(MARGIN, y, 4, gh, "F");
+
+        doc.setFontSize(13);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...C.white);
+        doc.text(gap.zip_code || "", MARGIN + 16, y + 18);
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(...C.dimgray);
+        doc.text(`${gap.distance_miles} mi away`, MARGIN + 16, y + 30);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...C.green);
+        doc.text(gap.estimated_monthly_revenue || "", W - MARGIN - 10, y + 18, { align: "right" });
+
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(...C.gray);
+        doc.text(noteLines, MARGIN + 16, y + 42);
+        const ny = y + 42 + noteLines.length * 11;
+        doc.setTextColor(...C.teal);
+        doc.text(actLines, MARGIN + 16, ny + 4);
+        y += gh + 6;
+      }
+    }
+
+    // ── Quick Wins ────────────────────────────────────────────────
+    if (data.quick_wins?.length) {
+      guard(20);
+      y += 6;
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.white);
+      doc.text("Quick Wins — Do Today", MARGIN, y);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...C.dimgray);
+      doc.text("Zero cost · Immediate impact", MARGIN + 150, y);
+      y += 14;
+
+      for (const win of data.quick_wins) {
+        const winLines = doc.splitTextToSize(win, INNER - 36);
+        const wh = winLines.length * 11 + 16;
+        guard(wh + 4);
+
+        doc.setFillColor(34, 197, 94, 0.06);
+        doc.roundedRect(MARGIN, y, INNER, wh, 4, 4, "F");
+        doc.setDrawColor(34, 197, 94, 0.2);
+        doc.setLineWidth(0.5);
+        doc.roundedRect(MARGIN, y, INNER, wh, 4, 4, "S");
+
+        // Checkbox
+        doc.setDrawColor(34, 197, 94, 0.4);
+        doc.setLineWidth(1);
+        doc.rect(MARGIN + 10, y + wh / 2 - 7, 12, 12, "S");
+
+        doc.setFontSize(8.5);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(...C.gray);
+        doc.text(winLines, MARGIN + 30, y + 11);
+        y += wh + 5;
+      }
+    }
+
+    // ── Suggested Review Responses ────────────────────────────────
+    if (data.suggested_responses?.length) {
+      guard(20);
+      y += 6;
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.white);
+      doc.text(`Review Responses (${data.review_response_needed} unanswered)`, MARGIN, y);
+      y += 14;
+
+      for (const sr of data.suggested_responses) {
+        const summLines = doc.splitTextToSize(`"${sr.review_summary}"`, INNER - 28);
+        const respLines = doc.splitTextToSize(sr.suggested_response || "", INNER - 28);
+        const rh = summLines.length * 11 + respLines.length * 11 + 40;
+        guard(rh + 4);
+
+        doc.setFillColor(...C.card);
+        doc.roundedRect(MARGIN, y, INNER, rh, 4, 4, "F");
+
+        doc.setFontSize(7.5);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...C.dimgray);
+        doc.text("REVIEWER SAID:", MARGIN + 12, y + 13);
+        doc.setFont("helvetica", "italic");
+        doc.setTextColor(...C.dimgray);
+        doc.text(summLines, MARGIN + 12, y + 24);
+        let ry = y + 24 + summLines.length * 11 + 6;
+
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...C.dimgray);
+        doc.text("YOUR RESPONSE:", MARGIN + 12, ry);
+        ry += 12;
+        doc.setFillColor(11, 17, 32, 0.6);
+        doc.roundedRect(MARGIN + 10, ry - 4, INNER - 20, respLines.length * 11 + 10, 3, 3, "F");
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(...C.gray);
+        doc.text(respLines, MARGIN + 16, ry + 7);
+        y += rh + 6;
+      }
     }
   }
 
