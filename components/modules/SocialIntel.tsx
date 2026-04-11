@@ -47,7 +47,6 @@ export default function SocialIntel() {
   const [seasonalCampaign, setSeasonalCampaign] = useState<"none"|"ramadan"|"eid">("none");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SocialAnalysisResult | null>(null);
-  const [calendarReady, setCalendarReady] = useState(false);
   const [error, setError] = useState<any>(null);
   const [status, setStatus] = useState<"idle"|"loading"|"phase1done"|"done"|"error">("idle");
   const [statusMsg, setStatusMsg] = useState("");
@@ -59,7 +58,7 @@ export default function SocialIntel() {
   const handleRun = async () => {
     if (!restaurantName.trim() || !city.trim()) return;
     setLoading(true); setStatus("loading"); setError(null); setResult(null);
-    setCalendarReady(false); setStatusMsg("Searching social profiles & competitors...");
+    setStatusMsg("Searching social profiles & competitors...");
     setElapsed(0); setActiveStep(0);
     elapsedRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
 
@@ -124,14 +123,20 @@ export default function SocialIntel() {
             }
 
             if (msg.type === "error") {
-              finish(); setError({ error: msg.error, code: msg.code }); setStatus("error");
+              finish();
+              // If Phase 1 already rendered results, keep them — just stop loading
+              if (phase1Data) {
+                setStatus("done");
+              } else {
+                setError({ error: msg.error, code: msg.code });
+                setStatus("error");
+              }
               return;
             }
 
             if (msg.type === "done") {
               finish();
               setResult({ ...msg.result, reportId: msg.reportId });
-              setCalendarReady(true);
               setStatus("done");
               setActiveTab("analysis");
               return;
