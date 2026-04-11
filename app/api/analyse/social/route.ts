@@ -25,173 +25,117 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "restaurant_name and city are required", code: "VALIDATION_ERROR" }, { status: 400 });
     }
 
-    const systemPrompt = `You are RestaurantIQ's Social Intelligence Engine. Do exactly 3 web searches, then immediately return valid JSON. No markdown, no text outside JSON.`;
+    const systemPrompt = `You are RestaurantIQ's Social Intelligence Engine. Do exactly 2 web searches, then immediately return valid JSON. No markdown, no text outside JSON.`;
 
     const userPrompt = `Analyse social media for "${restaurant_name}" in "${city}" (${concept || "restaurant"}).
-Instagram: ${instagram_handle ? "@" + instagram_handle : "find it"} | TikTok: ${tiktok_handle ? "@" + tiktok_handle : "find it"} | Competitors: ${competitor_handles || "top 2 halal competitors in " + city}
+${instagram_handle ? `Instagram: @${instagram_handle}` : ""} ${tiktok_handle ? `TikTok: @${tiktok_handle}` : ""}
+Competitors to benchmark: ${competitor_handles || "top halal food competitors in " + city}
 
-Do exactly 3 searches:
-1. "${restaurant_name}" Instagram and TikTok social media presence
-2. Trending halal food content TikTok Instagram 2025
-3. ${competitor_handles || "halal food competitors " + city} social media
+Do exactly 2 searches:
+1. "${restaurant_name}" ${city} Instagram TikTok social media followers engagement
+2. Trending halal food TikTok Instagram content formats ${city} 2025
 
-Then return this JSON immediately. Fill every field with real data from your searches:
+Then immediately return this JSON (no more searches):
 
 {
   "restaurant_name": "${restaurant_name}",
   "city": "${city}",
   "concept": "${concept || "restaurant"}",
-  "analysis_date": "<today YYYY-MM-DD>",
+  "analysis_date": "<YYYY-MM-DD>",
   "overall_social_score": <0-100>,
   "social_grade": "<A|B|C|D|F>",
-  "data_sources_searched": ["<url or source 1>", "<url or source 2>", "<url or source 3>"],
-  "summary": "<2-3 sentences: current social standing and #1 priority action>",
+  "data_sources_searched": ["<source1>", "<source2>"],
+  "summary": "<2-3 sentences on social standing and top priority>",
   "own_presence": {
     "instagram": {
-      "handle": "<@handle or not found>",
-      "followers": "<number or estimate>",
-      "following": "<number>",
-      "post_count": "<number>",
-      "estimated_engagement_rate": "<e.g. 3.2%>",
-      "posting_frequency": "<e.g. 3x/week>",
-      "content_themes": ["<theme1>", "<theme2>", "<theme3>"],
-      "formats_used": ["<Reels>", "<Stories>"],
-      "what_is_working": "<specific strength>",
-      "what_is_missing": "<specific gap>",
-      "best_performing_content_type": "<string>",
-      "profile_completeness_score": <0-10>,
-      "bio_assessment": "<short assessment>",
-      "link_in_bio_status": "<has link / no link>",
-      "reels_strategy": "<brief>",
-      "stories_frequency": "<daily/weekly/never>",
-      "growth_trend": "<growing|stagnant|declining|unknown>"
+      "handle": "<@handle or not found>", "followers": "<number>", "following": "<number>", "post_count": "<number>",
+      "estimated_engagement_rate": "<x%>", "posting_frequency": "<x/week>",
+      "content_themes": ["<theme1>","<theme2>","<theme3>"], "formats_used": ["<format1>","<format2>"],
+      "what_is_working": "<strength>", "what_is_missing": "<gap>",
+      "profile_completeness_score": <0-10>, "bio_assessment": "<brief>", "link_in_bio_status": "<has/no link>",
+      "reels_strategy": "<brief>", "stories_frequency": "<daily/weekly/never>", "growth_trend": "<growing|stagnant|declining|unknown>"
     },
     "tiktok": {
-      "handle": "<@handle or not found>",
-      "followers": "<number or estimate>",
-      "total_likes": "<number>",
-      "video_count": "<number>",
-      "estimated_avg_views": "<number>",
-      "estimated_top_video_views": "<number>",
-      "formats_used": ["<format1>", "<format2>"],
-      "posting_frequency": "<string>",
-      "profile_score": <0-10>,
-      "viral_potential": "<low|medium|high>",
-      "duet_stitch_usage": "<string>",
-      "trending_sounds_used": <true|false>,
-      "what_is_working": "<string>",
-      "what_is_missing": "<string>",
+      "handle": "<@handle or not found>", "followers": "<number>", "total_likes": "<number>", "video_count": "<number>",
+      "estimated_avg_views": "<number>", "estimated_top_video_views": "<number>",
+      "formats_used": ["<format1>","<format2>"], "posting_frequency": "<string>",
+      "profile_score": <0-10>, "viral_potential": "<low|medium|high>",
+      "trending_sounds_used": <true|false>, "what_is_working": "<string>", "what_is_missing": "<string>",
       "growth_trend": "<growing|stagnant|declining|unknown>"
     },
-    "combined_monthly_reach_estimate": "<e.g. 8,000 people/month>",
-    "social_vs_competitor_gap": "<e.g. 3x behind top competitor>"
+    "combined_monthly_reach_estimate": "<string>",
+    "social_vs_competitor_gap": "<string>"
   },
   "competitor_analysis": [
     {
-      "name": "<competitor name>",
-      "instagram_handle": "<@handle>",
-      "tiktok_handle": "<@handle>",
-      "instagram_followers": "<number>",
-      "tiktok_followers": "<number>",
-      "estimated_monthly_reach": "<string>",
-      "posting_frequency": "<string>",
-      "top_content_formats": ["<format1>", "<format2>"],
-      "content_themes_that_perform": ["<theme1>", "<theme2>"],
-      "estimated_avg_engagement_rate": "<string>",
-      "what_they_do_better": ["<item1>", "<item2>"],
-      "their_content_gaps": ["<gap1>", "<gap2>"],
-      "their_tone": "<casual/professional/hype>",
-      "halal_messaging": <true|false>,
-      "community_engagement": "<string>",
-      "threat_level": "<low|medium|high>",
-      "key_strategic_insight": "<one sentence>",
-      "opportunity_to_steal_audience": "<one sentence>"
+      "name": "<name>", "instagram_handle": "<@handle>", "tiktok_handle": "<@handle>",
+      "instagram_followers": "<number>", "tiktok_followers": "<number>",
+      "posting_frequency": "<string>", "top_content_formats": ["<f1>","<f2>"],
+      "what_they_do_better": ["<item1>","<item2>"], "their_content_gaps": ["<gap1>","<gap2>"],
+      "halal_messaging": <true|false>, "threat_level": "<low|medium|high>",
+      "key_strategic_insight": "<one sentence>", "opportunity_to_steal_audience": "<one sentence>"
     }
   ],
   "viral_content_intelligence": {
     "trending_formats_right_now": [
-      { "format_name": "<string>", "description": "<string>", "why_algorithm_loves_it": "<string>", "real_world_example": "<string>", "how_to_apply_to_restaurant": "<string>", "difficulty": "<easy|moderate|hard>", "estimated_reach_potential": "<string>" },
-      { "format_name": "<string>", "description": "<string>", "why_algorithm_loves_it": "<string>", "real_world_example": "<string>", "how_to_apply_to_restaurant": "<string>", "difficulty": "<easy|moderate|hard>", "estimated_reach_potential": "<string>" },
-      { "format_name": "<string>", "description": "<string>", "why_algorithm_loves_it": "<string>", "real_world_example": "<string>", "how_to_apply_to_restaurant": "<string>", "difficulty": "<easy|moderate|hard>", "estimated_reach_potential": "<string>" }
+      { "format_name": "<name>", "description": "<brief>", "why_algorithm_loves_it": "<reason>", "how_to_apply_to_restaurant": "<how>", "difficulty": "<easy|moderate|hard>", "estimated_reach_potential": "<string>" },
+      { "format_name": "<name>", "description": "<brief>", "why_algorithm_loves_it": "<reason>", "how_to_apply_to_restaurant": "<how>", "difficulty": "<easy|moderate|hard>", "estimated_reach_potential": "<string>" }
     ],
-    "trending_sounds_to_use": ["<sound1>", "<sound2>", "<sound3>"],
+    "trending_sounds_to_use": ["<sound1>","<sound2>","<sound3>"],
     "trending_hashtags": {
-      "mega_tags": ["<tag1>", "<tag2>", "<tag3>"],
-      "macro_tags": ["<tag1>", "<tag2>", "<tag3>"],
-      "niche_halal_tags": ["<tag1>", "<tag2>", "<tag3>"],
-      "location_tags": ["<tag1>", "<tag2>"],
-      "recommended_mix": "<strategy in one sentence>"
+      "mega_tags": ["<tag1>","<tag2>","<tag3>"], "macro_tags": ["<tag1>","<tag2>","<tag3>"],
+      "niche_halal_tags": ["<tag1>","<tag2>","<tag3>"], "location_tags": ["<tag1>","<tag2>"],
+      "recommended_mix": "<strategy>"
     },
     "best_posting_times": {
-      "instagram_weekday": "<e.g. 6-8 PM>",
-      "instagram_weekend": "<e.g. 11 AM-1 PM>",
-      "tiktok_weekday": "<e.g. 7-9 PM>",
-      "tiktok_weekend": "<e.g. 10 AM-12 PM>",
-      "ramadan_special": "<e.g. After iftar 8-10 PM>"
+      "instagram_weekday": "<time>", "instagram_weekend": "<time>",
+      "tiktok_weekday": "<time>", "tiktok_weekend": "<time>", "ramadan_special": "<time>"
     },
-    "algorithm_insights": ["<insight1>", "<insight2>", "<insight3>"],
-    "content_gap_in_market": "<what nobody is doing that you should>"
+    "algorithm_insights": ["<insight1>","<insight2>","<insight3>"],
+    "content_gap_in_market": "<what nobody is doing>"
   },
   "sentiment_analysis": {
     "instagram_sentiment": "<very positive|positive|mixed|negative|unknown>",
     "tiktok_sentiment": "<very positive|positive|mixed|negative|unknown>",
-    "positive_themes": ["<theme1>", "<theme2>", "<theme3>"],
-    "negative_themes": ["<theme1>", "<theme2>"],
-    "customer_language_patterns": ["<phrase1>", "<phrase2>", "<phrase3>"],
-    "viral_trigger_phrases": ["<phrase1>", "<phrase2>", "<phrase3>"],
-    "brand_perception": "<one sentence>",
-    "community_feeling": "<one sentence>",
-    "sentiment_opportunity": "<actionable one sentence>"
+    "positive_themes": ["<t1>","<t2>","<t3>"], "negative_themes": ["<t1>","<t2>"],
+    "customer_language_patterns": ["<p1>","<p2>","<p3>"],
+    "viral_trigger_phrases": ["<p1>","<p2>","<p3>"],
+    "brand_perception": "<one sentence>", "community_feeling": "<one sentence>",
+    "sentiment_opportunity": "<one sentence>"
   },
   "content_calendar": [
-    { "week": 1, "day": "Monday",   "platform": "TikTok",    "content_type": "<string>", "format": "<TikTok/Reel>", "hook": "<opening line>", "concept": "<what to film>", "what_to_film": "<specific instructions>", "caption_starter": "<first line>", "hashtags": ["<tag1>","<tag2>","<tag3>","<tag4>","<tag5>"], "best_time_to_post": "<time>", "viral_potential": "<low|medium|high>", "effort_level": "<easy|moderate|hard>", "trending_element_used": "<string>", "why_this_will_perform": "<string>", "call_to_action": "<string>" },
-    { "week": 1, "day": "Thursday", "platform": "Instagram", "content_type": "<string>", "format": "<Reel/Story>",  "hook": "<opening line>", "concept": "<what to film>", "what_to_film": "<specific instructions>", "caption_starter": "<first line>", "hashtags": ["<tag1>","<tag2>","<tag3>","<tag4>","<tag5>"], "best_time_to_post": "<time>", "viral_potential": "<low|medium|high>", "effort_level": "<easy|moderate|hard>", "trending_element_used": "<string>", "why_this_will_perform": "<string>", "call_to_action": "<string>" },
-    { "week": 2, "day": "Tuesday",  "platform": "Both",      "content_type": "<string>", "format": "<Reel/TikTok>", "hook": "<opening line>", "concept": "<what to film>", "what_to_film": "<specific instructions>", "caption_starter": "<first line>", "hashtags": ["<tag1>","<tag2>","<tag3>","<tag4>","<tag5>"], "best_time_to_post": "<time>", "viral_potential": "<low|medium|high>", "effort_level": "<easy|moderate|hard>", "trending_element_used": "<string>", "why_this_will_perform": "<string>", "call_to_action": "<string>" },
-    { "week": 2, "day": "Friday",   "platform": "TikTok",    "content_type": "<string>", "format": "<TikTok/Reel>", "hook": "<opening line>", "concept": "<what to film>", "what_to_film": "<specific instructions>", "caption_starter": "<first line>", "hashtags": ["<tag1>","<tag2>","<tag3>","<tag4>","<tag5>"], "best_time_to_post": "<time>", "viral_potential": "<low|medium|high>", "effort_level": "<easy|moderate|hard>", "trending_element_used": "<string>", "why_this_will_perform": "<string>", "call_to_action": "<string>" }
+    { "week": 1, "day": "Monday",   "platform": "TikTok",    "content_type": "<type>", "format": "TikTok", "hook": "<opening line>", "concept": "<what to film>", "what_to_film": "<instructions>", "caption_starter": "<first line>", "hashtags": ["<t1>","<t2>","<t3>","<t4>","<t5>"], "best_time_to_post": "<time>", "viral_potential": "high",   "effort_level": "easy",     "trending_element_used": "<element>", "why_this_will_perform": "<reason>", "call_to_action": "<cta>" },
+    { "week": 1, "day": "Thursday", "platform": "Instagram", "content_type": "<type>", "format": "Reel",   "hook": "<opening line>", "concept": "<what to film>", "what_to_film": "<instructions>", "caption_starter": "<first line>", "hashtags": ["<t1>","<t2>","<t3>","<t4>","<t5>"], "best_time_to_post": "<time>", "viral_potential": "medium", "effort_level": "easy",     "trending_element_used": "<element>", "why_this_will_perform": "<reason>", "call_to_action": "<cta>" },
+    { "week": 2, "day": "Tuesday",  "platform": "Both",      "content_type": "<type>", "format": "Reel",   "hook": "<opening line>", "concept": "<what to film>", "what_to_film": "<instructions>", "caption_starter": "<first line>", "hashtags": ["<t1>","<t2>","<t3>","<t4>","<t5>"], "best_time_to_post": "<time>", "viral_potential": "high",   "effort_level": "moderate", "trending_element_used": "<element>", "why_this_will_perform": "<reason>", "call_to_action": "<cta>" }
   ],
-  "content_ideas_deep_dive": [
-    { "title": "<string>", "platform": "<string>", "format": "<string>", "hook_line": "<scroll-stopping hook>", "full_concept": "<string>", "what_to_film_step_by_step": ["<step1>","<step2>","<step3>","<step4>"], "production_requirements": "<phone only / ring light / etc>", "estimated_reach_potential": "<string>", "best_posting_time": "<string>", "caption_template": "<full caption>", "hashtag_set": ["<tag1>","<tag2>","<tag3>","<tag4>","<tag5>"], "call_to_action": "<string>", "trending_element": "<string>", "why_this_will_go_viral": "<string>" }
-  ],
+  "content_ideas_deep_dive": [],
   "quick_wins": [
-    { "action": "<string>", "platform": "<string>", "specific_steps": ["<step1>","<step2>","<step3>"], "effort": "easy", "estimated_impact": "<string>", "do_today": true, "zero_cost": true },
-    { "action": "<string>", "platform": "<string>", "specific_steps": ["<step1>","<step2>","<step3>"], "effort": "easy", "estimated_impact": "<string>", "do_today": true, "zero_cost": true },
-    { "action": "<string>", "platform": "<string>", "specific_steps": ["<step1>","<step2>"], "effort": "moderate", "estimated_impact": "<string>", "do_today": false, "zero_cost": false },
-    { "action": "<string>", "platform": "<string>", "specific_steps": ["<step1>","<step2>"], "effort": "easy", "estimated_impact": "<string>", "do_today": false, "zero_cost": true }
+    { "action": "<action>", "platform": "<platform>", "specific_steps": ["<s1>","<s2>","<s3>"], "effort": "easy",     "estimated_impact": "<impact>", "do_today": true,  "zero_cost": true  },
+    { "action": "<action>", "platform": "<platform>", "specific_steps": ["<s1>","<s2>","<s3>"], "effort": "easy",     "estimated_impact": "<impact>", "do_today": true,  "zero_cost": true  },
+    { "action": "<action>", "platform": "<platform>", "specific_steps": ["<s1>","<s2>"],        "effort": "moderate", "estimated_impact": "<impact>", "do_today": false, "zero_cost": false }
   ],
   "growth_roadmap": {
     "current_estimated_reach": "<string>",
-    "days_30": { "goal": "<string>", "key_actions": ["<action1>","<action2>","<action3>"], "follower_target": "<string>" },
-    "days_60": { "goal": "<string>", "key_actions": ["<action1>","<action2>","<action3>"], "follower_target": "<string>" },
-    "days_90": { "goal": "<string>", "key_actions": ["<action1>","<action2>","<action3>"], "follower_target": "<string>" },
-    "success_metrics": ["<metric1>","<metric2>","<metric3>","<metric4>"]
+    "days_30": { "goal": "<goal>", "key_actions": ["<a1>","<a2>","<a3>"], "follower_target": "<number>" },
+    "days_60": { "goal": "<goal>", "key_actions": ["<a1>","<a2>","<a3>"], "follower_target": "<number>" },
+    "days_90": { "goal": "<goal>", "key_actions": ["<a1>","<a2>","<a3>"], "follower_target": "<number>" },
+    "success_metrics": ["<m1>","<m2>","<m3>","<m4>"]
   },
   "viral_opportunity": {
     "headline": "<punchy headline>",
     "opportunity_description": "<2 sentences>",
     "why_right_now": "<one sentence>",
-    "exact_steps": ["<step1>","<step2>","<step3>","<step4>"],
+    "exact_steps": ["<s1>","<s2>","<s3>","<s4>"],
     "estimated_reach_if_executed": "<string>",
-    "time_sensitive": <true|false>
+    "time_sensitive": true
   },
-  "grand_opening_pack": {
-    "include": ${is_new_opening ? "true" : "false"},
-    "pre_launch_7_days": [],
-    "opening_day_sequence": [],
-    "free_food_promo_announcement_script": "",
-    "queue_video_strategy": "",
-    "post_launch_week_1": []
-  },
-  "seasonal_campaign": {
-    "type": "${seasonal_campaign && seasonal_campaign !== "none" ? seasonal_campaign : "none"}",
-    "campaign_overview": "",
-    "content_plan": [],
-    "ramadan_specific_hooks": [],
-    "eid_specific_hooks": [],
-    "community_engagement_ideas": []
-  }
-}`;
+  "grand_opening_pack": { "include": ${is_new_opening ? "true" : "false"}, "pre_launch_7_days": [], "opening_day_sequence": [], "free_food_promo_announcement_script": "", "queue_video_strategy": "", "post_launch_week_1": [] },
+  "seasonal_campaign": { "type": "${seasonal_campaign && seasonal_campaign !== "none" ? seasonal_campaign : "none"}", "campaign_overview": "", "content_plan": [], "ramadan_specific_hooks": [], "eid_specific_hooks": [], "community_engagement_ideas": [] }
+}
 
-    const rawText = await callClaudeWithSearch(userPrompt, systemPrompt, 90000, 12000);
+Be specific with real data from your searches. Estimate realistically where data is unavailable.`;
+
+    const rawText = await callClaudeWithSearch(userPrompt, systemPrompt, 90000, 7000);
 
     let result: any;
     try {
