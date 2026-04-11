@@ -14,12 +14,13 @@ const SYSTEM_PROMPT =
 export async function callClaudeWithSearch(
   prompt: string,
   systemPrompt: string = SYSTEM_PROMPT,
-  timeoutMs: number = 55000
+  timeoutMs: number = 55000,
+  maxTokens: number = 6000
 ): Promise<string> {
   const response = await getClient().messages.create(
     {
       model: "claude-sonnet-4-6",
-      max_tokens: 6000,
+      max_tokens: maxTokens,
       system: systemPrompt,
       tools: [
         {

@@ -34,50 +34,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "restaurant_name and city are required", code: "VALIDATION_ERROR" }, { status: 400 });
     }
 
-    const systemPrompt = `You are RestaurantIQ's Social Intelligence Engine — an expert in food content strategy, viral social media, and halal and ethnic restaurant marketing. Use web search extensively to find real, current data about the restaurant's Instagram and TikTok presence, competitor accounts, and what is trending right now in the halal and ethnic food content space. Every insight must be grounded in real searched data. Return ONLY valid JSON with no markdown fences and no text outside the JSON object.`;
+    const systemPrompt = `You are RestaurantIQ's Social Intelligence Engine — expert in food content strategy, viral social media, and halal restaurant marketing. Do exactly 3 web searches then write JSON immediately. Return ONLY valid JSON, no markdown fences, no text outside the JSON.`;
 
-    const instagramPart = instagram_handle
-      ? `Instagram handle: @${instagram_handle}`
-      : `Instagram handle: not provided — search Instagram for this restaurant`;
-    const tiktokPart = tiktok_handle
-      ? `TikTok handle: @${tiktok_handle}`
-      : `TikTok handle: not provided — search TikTok for this restaurant`;
-    const competitorPart = competitor_handles
-      ? `Competitors to analyse: ${competitor_handles}`
-      : `Competitors to analyse: search for the top 2-3 competitors in the same halal or ethnic food category in this city and analyse their social media`;
-    const openingPart = is_new_opening
-      ? `New location opening: YES — include a full Grand Opening Content Pack`
-      : `New location opening: no`;
-    const seasonalPart = seasonal_campaign && seasonal_campaign !== "none"
-      ? `Seasonal campaign: ${seasonal_campaign} — include a full seasonal content calendar`
-      : `Seasonal campaign: none`;
+    const igPart = instagram_handle ? `@${instagram_handle}` : `unknown (search for it)`;
+    const ttPart = tiktok_handle ? `@${tiktok_handle}` : `unknown (search for it)`;
+    const compPart = competitor_handles || `top 2 halal competitors in ${city}`;
 
-    const userPrompt = `Conduct a full social media intelligence analysis for:
+    const userPrompt = `Social media analysis for "${restaurant_name}" in "${city}" (${concept || "restaurant"}).
+Instagram: ${igPart} | TikTok: ${ttPart} | Competitors: ${compPart}
+${is_new_opening ? "Include grand opening content pack." : ""}
+${seasonal_campaign && seasonal_campaign !== "none" ? `Include ${seasonal_campaign} seasonal campaign.` : ""}
 
-Restaurant: '${restaurant_name}' in '${city}' — ${concept || "restaurant"}
-${instagramPart}
-${tiktokPart}
-${competitorPart}
-${openingPart}
-${seasonalPart}
+Do exactly 3 searches:
+1. Search Instagram/TikTok for "${restaurant_name}" ${city} social media presence
+2. Search for top halal food content trends on TikTok and Instagram right now
+3. Search for competitor social accounts: ${compPart}
 
-Use web search to find:
-1. The restaurant's real Instagram profile data — follower count, posting frequency, engagement patterns, what content formats they use, what is working versus what is missing
-2. The restaurant's real TikTok profile — follower count, video count, estimated views, formats used, viral potential
-3. For each competitor — their follower counts on both platforms, what content is performing for them, their posting patterns, their weaknesses and content gaps
-4. What is trending RIGHT NOW in halal food content on TikTok and Instagram — search for viral halal food videos, trending audio used by food creators, hashtag performance in the ethnic food niche
-5. Comment sentiment on their social posts — what do people praise, what do they complain about, what language and phrases do they use
-
-Return ONLY this exact JSON structure. All fields required:
+Then immediately return this JSON (no extra searches):
 
 {
   "restaurant_name": "${restaurant_name}",
   "city": "${city}",
   "concept": "${concept || "restaurant"}",
   "analysis_date": "<YYYY-MM-DD>",
-  "overall_social_score": <integer 0-100>,
+  "overall_social_score": <0-100>,
   "social_grade": "<A|B|C|D|F>",
-  "data_sources_searched": ["<every URL or source searched>"],
+  "data_sources_searched": ["<source1>", "<source2>", "<source3>"],
   "own_presence": {
     "instagram": {
       "handle": "<string>",
@@ -86,12 +68,12 @@ Return ONLY this exact JSON structure. All fields required:
       "post_count": "<string>",
       "estimated_engagement_rate": "<string>",
       "posting_frequency": "<string>",
-      "content_themes": ["<string>"],
-      "formats_used": ["<string>"],
+      "content_themes": ["<theme1>", "<theme2>", "<theme3>"],
+      "formats_used": ["<format1>", "<format2>"],
       "what_is_working": "<string>",
       "what_is_missing": "<string>",
       "best_performing_content_type": "<string>",
-      "profile_completeness_score": <integer 0-10>,
+      "profile_completeness_score": <0-10>,
       "bio_assessment": "<string>",
       "link_in_bio_status": "<string>",
       "reels_strategy": "<string>",
@@ -105,12 +87,12 @@ Return ONLY this exact JSON structure. All fields required:
       "video_count": "<string>",
       "estimated_avg_views": "<string>",
       "estimated_top_video_views": "<string>",
-      "formats_used": ["<string>"],
+      "formats_used": ["<format1>", "<format2>"],
       "posting_frequency": "<string>",
-      "profile_score": <integer 0-10>,
+      "profile_score": <0-10>,
       "viral_potential": "<low|medium|high>",
       "duet_stitch_usage": "<string>",
-      "trending_sounds_used": <boolean>,
+      "trending_sounds_used": <true|false>,
       "what_is_working": "<string>",
       "what_is_missing": "<string>",
       "growth_trend": "<growing|stagnant|declining|unknown>"
@@ -127,13 +109,13 @@ Return ONLY this exact JSON structure. All fields required:
       "tiktok_followers": "<string>",
       "estimated_monthly_reach": "<string>",
       "posting_frequency": "<string>",
-      "top_content_formats": ["<string>"],
-      "content_themes_that_perform": ["<string>"],
+      "top_content_formats": ["<format1>", "<format2>"],
+      "content_themes_that_perform": ["<theme1>", "<theme2>"],
       "estimated_avg_engagement_rate": "<string>",
-      "what_they_do_better": ["<string>"],
-      "their_content_gaps": ["<string>"],
+      "what_they_do_better": ["<item1>", "<item2>"],
+      "their_content_gaps": ["<gap1>", "<gap2>"],
       "their_tone": "<string>",
-      "halal_messaging": <boolean>,
+      "halal_messaging": <true|false>,
       "community_engagement": "<string>",
       "threat_level": "<low|medium|high>",
       "key_strategic_insight": "<string>",
@@ -150,14 +132,32 @@ Return ONLY this exact JSON structure. All fields required:
         "how_to_apply_to_restaurant": "<string>",
         "difficulty": "<easy|moderate|hard>",
         "estimated_reach_potential": "<string>"
+      },
+      {
+        "format_name": "<string>",
+        "description": "<string>",
+        "why_algorithm_loves_it": "<string>",
+        "real_world_example": "<string>",
+        "how_to_apply_to_restaurant": "<string>",
+        "difficulty": "<easy|moderate|hard>",
+        "estimated_reach_potential": "<string>"
+      },
+      {
+        "format_name": "<string>",
+        "description": "<string>",
+        "why_algorithm_loves_it": "<string>",
+        "real_world_example": "<string>",
+        "how_to_apply_to_restaurant": "<string>",
+        "difficulty": "<easy|moderate|hard>",
+        "estimated_reach_potential": "<string>"
       }
     ],
-    "trending_sounds_to_use": ["<string>"],
+    "trending_sounds_to_use": ["<sound1>", "<sound2>", "<sound3>"],
     "trending_hashtags": {
-      "mega_tags": ["<string>"],
-      "macro_tags": ["<string>"],
-      "niche_halal_tags": ["<string>"],
-      "location_tags": ["<string>"],
+      "mega_tags": ["<tag1>", "<tag2>", "<tag3>"],
+      "macro_tags": ["<tag1>", "<tag2>", "<tag3>"],
+      "niche_halal_tags": ["<tag1>", "<tag2>", "<tag3>"],
+      "location_tags": ["<tag1>", "<tag2>"],
       "recommended_mix": "<string>"
     },
     "best_posting_times": {
@@ -167,39 +167,29 @@ Return ONLY this exact JSON structure. All fields required:
       "tiktok_weekend": "<string>",
       "ramadan_special": "<string>"
     },
-    "algorithm_insights": ["<string>"],
+    "algorithm_insights": ["<insight1>", "<insight2>", "<insight3>"],
     "content_gap_in_market": "<string>"
   },
   "sentiment_analysis": {
     "instagram_sentiment": "<very positive|positive|mixed|negative|unknown>",
     "tiktok_sentiment": "<very positive|positive|mixed|negative|unknown>",
-    "positive_themes": ["<string>"],
-    "negative_themes": ["<string>"],
-    "customer_language_patterns": ["<string>"],
-    "viral_trigger_phrases": ["<string>"],
+    "positive_themes": ["<theme1>", "<theme2>", "<theme3>"],
+    "negative_themes": ["<theme1>", "<theme2>"],
+    "customer_language_patterns": ["<phrase1>", "<phrase2>", "<phrase3>"],
+    "viral_trigger_phrases": ["<phrase1>", "<phrase2>", "<phrase3>"],
     "brand_perception": "<string>",
     "community_feeling": "<string>",
     "sentiment_opportunity": "<string>"
   },
   "content_calendar": [
-    {
-      "week": <1-4>,
-      "day": "<string>",
-      "platform": "<Instagram|TikTok|Both>",
-      "content_type": "<string>",
-      "format": "<string>",
-      "hook": "<string>",
-      "concept": "<string>",
-      "what_to_film": "<string>",
-      "caption_starter": "<string>",
-      "hashtags": ["<string>"],
-      "best_time_to_post": "<string>",
-      "viral_potential": "<low|medium|high>",
-      "effort_level": "<easy|moderate|hard>",
-      "trending_element_used": "<string>",
-      "why_this_will_perform": "<string>",
-      "call_to_action": "<string>"
-    }
+    { "week": 1, "day": "Monday", "platform": "TikTok", "content_type": "<string>", "format": "<string>", "hook": "<string>", "concept": "<string>", "what_to_film": "<string>", "caption_starter": "<string>", "hashtags": ["<tag1>","<tag2>","<tag3>"], "best_time_to_post": "<string>", "viral_potential": "<low|medium|high>", "effort_level": "<easy|moderate|hard>", "trending_element_used": "<string>", "why_this_will_perform": "<string>", "call_to_action": "<string>" },
+    { "week": 1, "day": "Thursday", "platform": "Instagram", "content_type": "<string>", "format": "<string>", "hook": "<string>", "concept": "<string>", "what_to_film": "<string>", "caption_starter": "<string>", "hashtags": ["<tag1>","<tag2>","<tag3>"], "best_time_to_post": "<string>", "viral_potential": "<low|medium|high>", "effort_level": "<easy|moderate|hard>", "trending_element_used": "<string>", "why_this_will_perform": "<string>", "call_to_action": "<string>" },
+    { "week": 2, "day": "Tuesday", "platform": "Both", "content_type": "<string>", "format": "<string>", "hook": "<string>", "concept": "<string>", "what_to_film": "<string>", "caption_starter": "<string>", "hashtags": ["<tag1>","<tag2>","<tag3>"], "best_time_to_post": "<string>", "viral_potential": "<low|medium|high>", "effort_level": "<easy|moderate|hard>", "trending_element_used": "<string>", "why_this_will_perform": "<string>", "call_to_action": "<string>" },
+    { "week": 2, "day": "Friday", "platform": "TikTok", "content_type": "<string>", "format": "<string>", "hook": "<string>", "concept": "<string>", "what_to_film": "<string>", "caption_starter": "<string>", "hashtags": ["<tag1>","<tag2>","<tag3>"], "best_time_to_post": "<string>", "viral_potential": "<low|medium|high>", "effort_level": "<easy|moderate|hard>", "trending_element_used": "<string>", "why_this_will_perform": "<string>", "call_to_action": "<string>" },
+    { "week": 3, "day": "Wednesday", "platform": "Instagram", "content_type": "<string>", "format": "<string>", "hook": "<string>", "concept": "<string>", "what_to_film": "<string>", "caption_starter": "<string>", "hashtags": ["<tag1>","<tag2>","<tag3>"], "best_time_to_post": "<string>", "viral_potential": "<low|medium|high>", "effort_level": "<easy|moderate|hard>", "trending_element_used": "<string>", "why_this_will_perform": "<string>", "call_to_action": "<string>" },
+    { "week": 3, "day": "Saturday", "platform": "TikTok", "content_type": "<string>", "format": "<string>", "hook": "<string>", "concept": "<string>", "what_to_film": "<string>", "caption_starter": "<string>", "hashtags": ["<tag1>","<tag2>","<tag3>"], "best_time_to_post": "<string>", "viral_potential": "<low|medium|high>", "effort_level": "<easy|moderate|hard>", "trending_element_used": "<string>", "why_this_will_perform": "<string>", "call_to_action": "<string>" },
+    { "week": 4, "day": "Monday", "platform": "Both", "content_type": "<string>", "format": "<string>", "hook": "<string>", "concept": "<string>", "what_to_film": "<string>", "caption_starter": "<string>", "hashtags": ["<tag1>","<tag2>","<tag3>"], "best_time_to_post": "<string>", "viral_potential": "<low|medium|high>", "effort_level": "<easy|moderate|hard>", "trending_element_used": "<string>", "why_this_will_perform": "<string>", "call_to_action": "<string>" },
+    { "week": 4, "day": "Friday", "platform": "Instagram", "content_type": "<string>", "format": "<string>", "hook": "<string>", "concept": "<string>", "what_to_film": "<string>", "caption_starter": "<string>", "hashtags": ["<tag1>","<tag2>","<tag3>"], "best_time_to_post": "<string>", "viral_potential": "<low|medium|high>", "effort_level": "<easy|moderate|hard>", "trending_element_used": "<string>", "why_this_will_perform": "<string>", "call_to_action": "<string>" }
   ],
   "content_ideas_deep_dive": [
     {
@@ -208,65 +198,86 @@ Return ONLY this exact JSON structure. All fields required:
       "format": "<string>",
       "hook_line": "<string>",
       "full_concept": "<string>",
-      "what_to_film_step_by_step": ["<string>"],
+      "what_to_film_step_by_step": ["<step1>", "<step2>", "<step3>", "<step4>"],
       "production_requirements": "<string>",
       "estimated_reach_potential": "<string>",
       "best_posting_time": "<string>",
       "caption_template": "<string>",
-      "hashtag_set": ["<string>"],
+      "hashtag_set": ["<tag1>","<tag2>","<tag3>","<tag4>","<tag5>"],
+      "call_to_action": "<string>",
+      "trending_element": "<string>",
+      "why_this_will_go_viral": "<string>"
+    },
+    {
+      "title": "<string>",
+      "platform": "<string>",
+      "format": "<string>",
+      "hook_line": "<string>",
+      "full_concept": "<string>",
+      "what_to_film_step_by_step": ["<step1>", "<step2>", "<step3>", "<step4>"],
+      "production_requirements": "<string>",
+      "estimated_reach_potential": "<string>",
+      "best_posting_time": "<string>",
+      "caption_template": "<string>",
+      "hashtag_set": ["<tag1>","<tag2>","<tag3>","<tag4>","<tag5>"],
       "call_to_action": "<string>",
       "trending_element": "<string>",
       "why_this_will_go_viral": "<string>"
     }
   ],
   "quick_wins": [
-    {
-      "action": "<string>",
-      "platform": "<string>",
-      "specific_steps": ["<string>"],
-      "effort": "<easy|moderate|hard>",
-      "estimated_impact": "<string>",
-      "do_today": <boolean>,
-      "zero_cost": <boolean>
-    }
+    { "action": "<string>", "platform": "<string>", "specific_steps": ["<step1>", "<step2>", "<step3>"], "effort": "<easy|moderate|hard>", "estimated_impact": "<string>", "do_today": true, "zero_cost": true },
+    { "action": "<string>", "platform": "<string>", "specific_steps": ["<step1>", "<step2>", "<step3>"], "effort": "<easy|moderate|hard>", "estimated_impact": "<string>", "do_today": true, "zero_cost": true },
+    { "action": "<string>", "platform": "<string>", "specific_steps": ["<step1>", "<step2>"], "effort": "<easy|moderate|hard>", "estimated_impact": "<string>", "do_today": false, "zero_cost": false },
+    { "action": "<string>", "platform": "<string>", "specific_steps": ["<step1>", "<step2>"], "effort": "<easy|moderate|hard>", "estimated_impact": "<string>", "do_today": false, "zero_cost": true }
   ],
   "growth_roadmap": {
     "current_estimated_reach": "<string>",
-    "days_30": { "goal": "<string>", "key_actions": ["<string>"], "follower_target": "<string>" },
-    "days_60": { "goal": "<string>", "key_actions": ["<string>"], "follower_target": "<string>" },
-    "days_90": { "goal": "<string>", "key_actions": ["<string>"], "follower_target": "<string>" },
-    "success_metrics": ["<string>"]
+    "days_30": { "goal": "<string>", "key_actions": ["<action1>", "<action2>", "<action3>"], "follower_target": "<string>" },
+    "days_60": { "goal": "<string>", "key_actions": ["<action1>", "<action2>", "<action3>"], "follower_target": "<string>" },
+    "days_90": { "goal": "<string>", "key_actions": ["<action1>", "<action2>", "<action3>"], "follower_target": "<string>" },
+    "success_metrics": ["<metric1>", "<metric2>", "<metric3>", "<metric4>"]
   },
   "viral_opportunity": {
     "headline": "<string>",
     "opportunity_description": "<string>",
     "why_right_now": "<string>",
-    "exact_steps": ["<string>"],
+    "exact_steps": ["<step1>", "<step2>", "<step3>", "<step4>"],
     "estimated_reach_if_executed": "<string>",
-    "time_sensitive": <boolean>
+    "time_sensitive": <true|false>
   },
   "grand_opening_pack": {
-    "include": <boolean>,
-    "pre_launch_7_days": [{ "day": "<string>", "platform": "<string>", "content_type": "<string>", "concept": "<string>", "hook": "<string>", "caption": "<string>", "goal": "<string>" }],
-    "opening_day_sequence": [{ "time": "<string>", "platform": "<string>", "content": "<string>", "goal": "<string>" }],
-    "free_food_promo_announcement_script": "<string>",
-    "queue_video_strategy": "<string>",
-    "post_launch_week_1": ["<string>"]
+    "include": ${is_new_opening ? "true" : "false"},
+    "pre_launch_7_days": ${is_new_opening ? `[
+      { "day": "-7", "platform": "Instagram", "content_type": "<string>", "concept": "<string>", "hook": "<string>", "caption": "<string>", "goal": "Build anticipation" },
+      { "day": "-5", "platform": "TikTok", "content_type": "<string>", "concept": "<string>", "hook": "<string>", "caption": "<string>", "goal": "Go viral" },
+      { "day": "-3", "platform": "Both", "content_type": "<string>", "concept": "<string>", "hook": "<string>", "caption": "<string>", "goal": "Drive pre-orders" },
+      { "day": "-1", "platform": "TikTok", "content_type": "<string>", "concept": "<string>", "hook": "<string>", "caption": "<string>", "goal": "Last push" }
+    ]` : "[]"},
+    "opening_day_sequence": ${is_new_opening ? `[
+      { "time": "7:00 AM", "platform": "Instagram", "content": "<string>", "goal": "Announce open" },
+      { "time": "12:00 PM", "platform": "TikTok", "content": "<string>", "goal": "Show the queue" },
+      { "time": "5:00 PM", "platform": "Both", "content": "<string>", "goal": "Evening rush" }
+    ]` : "[]"},
+    "free_food_promo_announcement_script": ${is_new_opening ? '"<announcement script>"' : '""'},
+    "queue_video_strategy": ${is_new_opening ? '"<queue video tips>"' : '""'},
+    "post_launch_week_1": ${is_new_opening ? '["<action1>","<action2>","<action3>","<action4>","<action5>"]' : '[]'}
   },
   "seasonal_campaign": {
-    "type": "<ramadan|eid|none>",
+    "type": "${seasonal_campaign && seasonal_campaign !== "none" ? seasonal_campaign : "none"}",
     "campaign_overview": "<string>",
-    "content_plan": [{ "phase": "<string>", "content_ideas": ["<string>"], "best_formats": ["<string>"], "key_message": "<string>", "posting_schedule": "<string>" }],
-    "ramadan_specific_hooks": ["<string>"],
-    "eid_specific_hooks": ["<string>"],
-    "community_engagement_ideas": ["<string>"]
+    "content_plan": ${seasonal_campaign && seasonal_campaign !== "none" ? `[
+      { "phase": "Week 1 — Launch", "content_ideas": ["<idea1>", "<idea2>", "<idea3>"], "best_formats": ["Reels", "TikTok"], "key_message": "<string>", "posting_schedule": "Daily" },
+      { "phase": "Week 2 — Peak", "content_ideas": ["<idea1>", "<idea2>", "<idea3>"], "best_formats": ["Stories", "TikTok"], "key_message": "<string>", "posting_schedule": "2x daily" }
+    ]` : "[]"},
+    "ramadan_specific_hooks": ${seasonal_campaign === "ramadan" ? '["<hook1>","<hook2>","<hook3>"]' : '[]'},
+    "eid_specific_hooks": ${seasonal_campaign === "eid" ? '["<hook1>","<hook2>","<hook3>"]' : '[]'},
+    "community_engagement_ideas": ${seasonal_campaign && seasonal_campaign !== "none" ? '["<idea1>","<idea2>","<idea3>"]' : '[]'}
   },
-  "summary": "<string>"
-}
+  "summary": "<2-3 sentence overall assessment and top priority action>"
+}`;
 
-Generate 3 trending formats, 8 content calendar entries (2 per week), 3 content ideas deep dive, 5 quick wins. Be specific with real data from your searches.`;
-
-    const rawText = await callClaudeWithSearch(userPrompt, systemPrompt, 90000);
+    const rawText = await callClaudeWithSearch(userPrompt, systemPrompt, 90000, 8000);
 
     let result: any;
     try {
