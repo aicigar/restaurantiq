@@ -59,11 +59,13 @@ export default function SocialIntel() {
     setLoading(true); setStatus("loading"); setError(null); setResult(null);
     setElapsed(0); setActiveStep(0);
     elapsedRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
-    const stepTimes = [10000, 25000, 45000];
+    const stepTimes = [15000, 35000, 60000];
     stepTimes.forEach((t, i) => setTimeout(() => setActiveStep(i + 1), t));
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 240000);
+    const done = () => {
+      if (elapsedRef.current) clearInterval(elapsedRef.current);
+      setLoading(false);
+    };
 
     try {
       const res = await fetch("/api/analyse/social", {
@@ -79,23 +81,51 @@ export default function SocialIntel() {
           is_new_opening: isNewOpening,
           seasonal_campaign: seasonalCampaign,
         }),
-        signal: controller.signal,
       });
-      clearTimeout(timeoutId);
-      const data = await res.json();
-      if (elapsedRef.current) clearInterval(elapsedRef.current);
-      setLoading(false);
-      if (!res.ok) { setError(data); setStatus("error"); }
-      else { setResult(data); setStatus("done"); setActiveTab("analysis"); }
-    } catch (err: any) {
-      clearTimeout(timeoutId);
-      if (elapsedRef.current) clearInterval(elapsedRef.current);
-      setLoading(false);
-      if (err.name === "AbortError") {
-        setError({ error: "Analysis timed out after 90 seconds. Try again.", code: "TIMEOUT" });
-      } else {
-        setError({ error: err.message || "Network error", code: "API_ERROR" });
+
+      // Non-2xx before streaming starts = JSON error (auth, plan limit, etc.)
+      if (!res.ok) {
+        const data = await res.json();
+        done(); setError(data); setStatus("error");
+        return;
       }
+
+      // Consume SSE stream
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done: streamDone, value } = await reader.read();
+        if (streamDone) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() ?? "";
+
+        for (const part of parts) {
+          if (!part.startsWith("data: ")) continue;
+          try {
+            const msg = JSON.parse(part.slice(6));
+            if (msg.type === "error") {
+              done(); setError({ error: msg.error, code: msg.code }); setStatus("error");
+              return;
+            }
+            if (msg.type === "done") {
+              done(); setResult({ ...msg.result, reportId: msg.reportId }); setStatus("done"); setActiveTab("analysis");
+              return;
+            }
+          } catch {
+            // malformed SSE chunk, keep going
+          }
+        }
+      }
+
+      // Stream ended without a done event
+      done(); setError({ error: "No response received. Please try again.", code: "API_ERROR" }); setStatus("error");
+    } catch (err: any) {
+      done();
+      setError({ error: err.message || "Network error", code: "API_ERROR" });
       setStatus("error");
     }
   };
