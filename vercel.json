@@ -1,8 +1,11 @@
 {
   "functions": {
-    "app/api/analyse/location/**":    { "maxDuration": 60 },
-    "app/api/analyse/reviews/**":     { "maxDuration": 60 },
-    "app/api/analyse/competitors/**": { "maxDuration": 60 },
-    "app/api/analyse/advisor/**":     { "maxDuration": 120 }
+    "app/api/analyse/location/**":         { "maxDuration": 60 },
+    "app/api/analyse/reviews/**":          { "maxDuration": 60 },
+    "app/api/analyse/competitors/**":      { "maxDuration": 60 },
+    "app/api/analyse/advisor/**":          { "maxDuration": 120 },
+    "app/api/analyse/social/**":           { "maxDuration": 300 },
+    "app/api/analyse/social-hooks/**":     { "maxDuration": 60 },
+    "app/api/analyse/social-hashtags/**":  { "maxDuration": 60 }
   }
 }

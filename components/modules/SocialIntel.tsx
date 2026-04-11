@@ -63,7 +63,7 @@ export default function SocialIntel() {
     stepTimes.forEach((t, i) => setTimeout(() => setActiveStep(i + 1), t));
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 95000);
+    const timeoutId = setTimeout(() => controller.abort(), 240000);
 
     try {
       const res = await fetch("/api/analyse/social", {
