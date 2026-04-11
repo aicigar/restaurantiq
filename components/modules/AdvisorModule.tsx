@@ -190,20 +190,7 @@ export default function AdvisorModule() {
 
           {/* ── Loading ── */}
           {status === "loading" && (
-            <div className="relative flex flex-col items-center justify-center h-full text-center overflow-hidden">
-              {/* Animated background orbs */}
-              <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full opacity-10 animate-pulse"
-                  style={{ background: "radial-gradient(circle, #FFB547, transparent)", filter: "blur(40px)", animationDuration: "3s" }} />
-                <div className="absolute bottom-1/4 right-1/4 w-48 h-48 rounded-full opacity-8 animate-pulse"
-                  style={{ background: "radial-gradient(circle, #00C9A7, transparent)", filter: "blur(50px)", animationDuration: "4s", animationDelay: "1s" }} />
-                <div className="absolute top-1/2 right-1/3 w-32 h-32 rounded-full opacity-6 animate-pulse"
-                  style={{ background: "radial-gradient(circle, #FF4D6D, transparent)", filter: "blur(35px)", animationDuration: "5s", animationDelay: "2s" }} />
-                {/* Subtle grid */}
-                <div className="absolute inset-0 opacity-3"
-                  style={{ backgroundImage: "linear-gradient(rgba(255,181,71,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,181,71,0.05) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
-              </div>
-
+            <div className="flex flex-col items-center justify-center h-full text-center">
               {/* Central spinner ring */}
               <div className="relative mb-8">
                 {/* Outer glow ring */}
